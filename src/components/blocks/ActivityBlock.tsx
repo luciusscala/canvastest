@@ -1,4 +1,4 @@
-import { ActivityBlock as ActivityBlockType } from '../../types';
+import type { ActivityBlock as ActivityBlockType } from '../../types/index';
 
 interface ActivityBlockProps {
   block: ActivityBlockType;

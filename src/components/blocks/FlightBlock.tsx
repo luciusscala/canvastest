@@ -1,4 +1,4 @@
-import { FlightBlock as FlightBlockType } from '../../types';
+import type { FlightBlock as FlightBlockType } from '../../types/index';
 
 interface FlightBlockProps {
   block: FlightBlockType;

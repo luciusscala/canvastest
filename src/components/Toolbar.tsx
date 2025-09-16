@@ -1,5 +1,5 @@
 import { useCanvasStore } from '../store/useCanvasStore';
-import { FlightBlock, HotelBlock, ActivityBlock } from '../types';
+import type { FlightBlock, HotelBlock, ActivityBlock } from '../types/index';
 
 export function Toolbar() {
   const { addBlock } = useCanvasStore();

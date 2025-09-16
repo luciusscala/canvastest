@@ -1,5 +1,5 @@
 import { useDraggable } from '@dnd-kit/core';
-import { TravelBlock } from '../types';
+import type { TravelBlock } from '../types/index';
 import { FlightBlock } from './blocks/FlightBlock';
 import { HotelBlock } from './blocks/HotelBlock';
 import { ActivityBlock } from './blocks/ActivityBlock';

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { TravelBlock } from '../types';
+import type { TravelBlock } from '../types/index';
 import { useCanvasStore } from '../store/useCanvasStore';
 
 interface ResizableBlockProps {

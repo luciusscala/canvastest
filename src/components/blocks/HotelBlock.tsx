@@ -1,4 +1,4 @@
-import { HotelBlock as HotelBlockType } from '../../types';
+import type { HotelBlock as HotelBlockType } from '../../types/index';
 
 interface HotelBlockProps {
   block: HotelBlockType;

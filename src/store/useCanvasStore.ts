@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { TravelBlock, FlightBlock, HotelBlock, ActivityBlock } from '../types';
+import type { TravelBlock } from '../types/index';
 
 interface CanvasState {
   blocks: TravelBlock[];
