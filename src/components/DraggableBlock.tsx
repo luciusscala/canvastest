@@ -2,6 +2,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { useState } from 'react';
 import type { TravelBlock } from '../types/index';
 import { FlightBlock } from './blocks/FlightBlock';
+import { RoundTripFlightBlock } from './blocks/RoundTripFlightBlock';
 import { HotelBlock } from './blocks/HotelBlock';
 import { ActivityBlock } from './blocks/ActivityBlock';
 import { TimelineBlock } from './TimelineBlock';
@@ -40,6 +41,8 @@ export function DraggableBlock({ block }: DraggableBlockProps) {
     switch (block.type) {
       case 'flight':
         return <FlightBlock block={block as any} />;
+      case 'roundtrip-flight':
+        return <RoundTripFlightBlock block={block as any} />;
       case 'hotel':
         return <HotelBlock block={block as any} />;
       case 'activity':

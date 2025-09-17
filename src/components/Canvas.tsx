@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { DndContext, type DragEndEvent, useDndMonitor } from '@dnd-kit/core';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { DraggableBlock } from './DraggableBlock';
@@ -63,7 +63,7 @@ function CanvasContent({ children }: CanvasProps) {
     }
   }, [isDragActive]);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
+  const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
     const zoomSpeed = 0.1;
     const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
@@ -74,6 +74,17 @@ function CanvasContent({ children }: CanvasProps) {
     }));
   }, []);
 
+  // Add wheel event listener with proper options
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.addEventListener('wheel', handleWheel, { passive: false });
+      return () => {
+        canvas.removeEventListener('wheel', handleWheel);
+      };
+    }
+  }, [handleWheel]);
+
   return (
     <div
       ref={canvasRef}
@@ -82,9 +93,8 @@ function CanvasContent({ children }: CanvasProps) {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      onWheel={handleWheel}
     >
-      {/* Figma Jam-style dot grid background */}
+      {/* Grid background */}
       <DotGrid spacing={20} dotSize={1} />
       
       <div

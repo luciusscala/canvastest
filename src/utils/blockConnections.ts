@@ -40,7 +40,7 @@ export function getConnectionPoints(block: TravelBlock): ConnectionPoint[] {
 
 // Calculate block width based on duration
 export function getBlockWidth(block: TravelBlock): number {
-  const PIXELS_PER_DAY = 60; // Each day is 60 pixels wide
+  const PIXELS_PER_HOUR = 2.5; // Each hour is 2.5 pixels wide
   const EVENT_BLOCK_WIDTH = 80; // Width of the thick event blocks
   
   if (block.type === 'activity') {
@@ -48,7 +48,7 @@ export function getBlockWidth(block: TravelBlock): number {
   }
   
   // For flights and hotels, total width includes two event blocks plus timeline
-  return Math.max(160, block.duration * PIXELS_PER_DAY); // Minimum 160px width
+  return Math.max(160, block.duration * PIXELS_PER_HOUR); // Minimum 160px width
 }
 
 // Check if two blocks can connect

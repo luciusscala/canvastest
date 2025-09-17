@@ -5,8 +5,8 @@ interface HotelBlockProps {
 }
 
 export function HotelBlock({ block }: HotelBlockProps) {
-  // Use the duration property from the block
-  const days = block.duration;
+  // Convert duration from hours to days for display
+  const days = Math.round((block.duration / 24) * 10) / 10;
 
   return (
     <div className="text-black text-center">

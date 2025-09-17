@@ -5,8 +5,8 @@ interface FlightBlockProps {
 }
 
 export function FlightBlock({ block }: FlightBlockProps) {
-  // Convert duration from days to hours for display
-  const hours = Math.round(block.duration * 24 * 10) / 10;
+  // Duration is already in hours
+  const hours = Math.round(block.duration * 10) / 10;
 
   return (
     <div className="text-black text-center">

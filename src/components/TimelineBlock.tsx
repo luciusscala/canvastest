@@ -16,14 +16,15 @@ export function TimelineBlock({
   isDragging = false,
   children 
 }: TimelineBlockProps) {
-  const PIXELS_PER_DAY = 60; // Each day is 60 pixels wide
+  const PIXELS_PER_HOUR = 2.5; // Each hour is 2.5 pixels wide (60px per day = 2.5px per hour)
   const EVENT_BLOCK_WIDTH = 80; // Width of the thick event blocks
   const TIMELINE_HEIGHT = 16; // Height of the thin connecting line (increased for visibility)
-  const totalWidth = Math.max(240, block.duration * PIXELS_PER_DAY); // Total width including duration (increased minimum)
+  const totalWidth = Math.max(160, block.duration * PIXELS_PER_HOUR); // Total width based on duration in hours
 
   const getBlockColor = () => {
     switch (block.type) {
       case 'flight': return '#E74C3C'; // Red-brown like in the image
+      case 'roundtrip-flight': return '#E74C3C'; // Red-brown for round-trip
       case 'hotel': return '#2ECC71'; // Light green like in the image
       case 'activity': return '#3498DB'; // Blue like in the image
       default: return '#95A5A6';
@@ -33,6 +34,7 @@ export function TimelineBlock({
   const getBlockAccent = () => {
     switch (block.type) {
       case 'flight': return '#C0392B'; // Darker red
+      case 'roundtrip-flight': return '#C0392B'; // Darker red for round-trip
       case 'hotel': return '#27AE60'; // Darker green
       case 'activity': return '#2980B9'; // Darker blue
       default: return '#7F8C8D';
@@ -106,7 +108,7 @@ export function TimelineBlock({
           filter: isDragging ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.3))' : 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))',
         }}
       >
-        {/* Start Event Block (Check-in, Takeoff) - Thick block */}
+        {/* Start Event Block (Check-in, Departure) - Thick block */}
         <div
           className="absolute left-0 top-0 px-3 py-2 rounded-lg border-2 border-black"
           style={{
@@ -123,16 +125,17 @@ export function TimelineBlock({
           }}
         >
           <div className="text-xs font-bold text-black">
-            {block.type === 'flight' ? 'TAKEOFF' : 'CHECK-IN'}
+            {block.type === 'roundtrip-flight' ? 'DEPARTURE' : 
+             block.type === 'flight' ? 'TAKEOFF' : 'CHECK-IN'}
           </div>
         </div>
 
-        {/* Thin horizontal connecting line */}
+        {/* Thin horizontal connecting line - flush with top of rectangles */}
         <div
           className="absolute border-2 border-black rounded"
           style={{
             left: `${EVENT_BLOCK_WIDTH}px`,
-            top: `${(EVENT_BLOCK_WIDTH - TIMELINE_HEIGHT) / 2}px`,
+            top: '0px', // Flush with the top of the thick rectangles
             width: `${totalWidth - 2 * EVENT_BLOCK_WIDTH}px`,
             height: `${TIMELINE_HEIGHT}px`,
             backgroundColor: getBlockColor(),
@@ -142,7 +145,7 @@ export function TimelineBlock({
           }}
         />
 
-        {/* End Event Block (Check-out, Landing) - Thick block */}
+        {/* End Event Block (Check-out, Return) - Thick block */}
         <div
           className="absolute top-0 px-3 py-2 rounded-lg border-2 border-black"
           style={{
@@ -160,7 +163,8 @@ export function TimelineBlock({
           }}
         >
           <div className="text-xs font-bold text-black">
-            {block.type === 'flight' ? 'LANDING' : 'CHECK-OUT'}
+            {block.type === 'roundtrip-flight' ? 'RETURN' : 
+             block.type === 'flight' ? 'LANDING' : 'CHECK-OUT'}
           </div>
         </div>
 
