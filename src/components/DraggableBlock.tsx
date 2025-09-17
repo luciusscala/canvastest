@@ -1,9 +1,10 @@
 import { useDraggable } from '@dnd-kit/core';
+import { useState } from 'react';
 import type { TravelBlock } from '../types/index';
 import { FlightBlock } from './blocks/FlightBlock';
 import { HotelBlock } from './blocks/HotelBlock';
 import { ActivityBlock } from './blocks/ActivityBlock';
-import { ResizableBlock } from './ResizableBlock';
+import { ScratchBlock } from './ScratchBlock';
 import { useCanvasStore } from '../store/useCanvasStore';
 
 interface DraggableBlockProps {
@@ -12,6 +13,7 @@ interface DraggableBlockProps {
 
 export function DraggableBlock({ block }: DraggableBlockProps) {
   const { selectBlock, hasTemporalConflict } = useCanvasStore();
+  const [isHovered, setIsHovered] = useState(false);
   const hasConflict = hasTemporalConflict(block);
 
   const {
@@ -52,11 +54,17 @@ export function DraggableBlock({ block }: DraggableBlockProps) {
       {...listeners}
       {...attributes}
       onClick={handleClick}
-      className={`${isDragging ? 'opacity-50' : ''} ${hasConflict ? 'ring-2 ring-red-500' : ''}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      <ResizableBlock block={block}>
+      <ScratchBlock
+        block={block}
+        isSelected={false}
+        isHovered={isHovered}
+        isDragging={isDragging}
+      >
         {renderBlock()}
-      </ResizableBlock>
+      </ScratchBlock>
     </div>
   );
 }

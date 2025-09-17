@@ -2,6 +2,9 @@ import { useRef, useState, useCallback } from 'react';
 import { DndContext, type DragEndEvent, useDndMonitor } from '@dnd-kit/core';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { DraggableBlock } from './DraggableBlock';
+import { DotGrid } from './DotGrid';
+import { TemporalMarkers } from './TemporalMarkers';
+import { findNearbyConnectionPoints, calculateSnapPosition } from '../utils/blockConnections';
 
 interface CanvasProps {
   children?: React.ReactNode;
@@ -19,8 +22,12 @@ function CanvasContent({ children }: CanvasProps) {
 
   // Monitor drag state from @dnd-kit
   useDndMonitor({
-    onDragStart: () => setIsDragActive(true),
-    onDragEnd: () => setIsDragActive(false),
+    onDragStart: () => {
+      setIsDragActive(true);
+    },
+    onDragEnd: () => {
+      setIsDragActive(false);
+    },
   });
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -68,13 +75,19 @@ function CanvasContent({ children }: CanvasProps) {
   return (
     <div
       ref={canvasRef}
-      className="w-full h-screen overflow-hidden bg-gray-100 cursor-grab active:cursor-grabbing"
+      className="w-full h-screen overflow-hidden bg-white cursor-grab active:cursor-grabbing"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
     >
+      {/* Figma Jam-style dot grid background */}
+      <DotGrid spacing={20} dotSize={1} />
+      
+      {/* Temporal markers */}
+      <TemporalMarkers transform={transform} />
+      
       <div
         className="origin-top-left relative"
         style={{
@@ -95,28 +108,48 @@ function CanvasContent({ children }: CanvasProps) {
 
 // Main Canvas component that provides DndContext
 export function Canvas({ children }: CanvasProps) {
-  const { updateBlock, getBlock } = useCanvasStore();
+  const { updateBlock, getBlock, blocks } = useCanvasStore();
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, delta } = event;
     if (delta) {
       const block = getBlock(active.id as string);
       if (block) {
-        // Apply snapping to grid
         const newX = block.x + delta.x;
         const newY = block.y + delta.y;
+        
+        // Create a temporary block with new position
+        const tempBlock = { ...block, x: newX, y: newY };
+        
+        // Find nearby connection points
+        const nearbyPoints = findNearbyConnectionPoints(tempBlock, blocks);
+        
+        if (nearbyPoints.length > 0) {
+          // Snap to the closest connection point
+          const closestPoint = nearbyPoints[0];
+          const snapPosition = calculateSnapPosition(
+            tempBlock,
+            closestPoint,
+            'start-to-end' // Default snap type
+          );
+          
+          updateBlock(block.id, {
+            x: snapPosition.x,
+            y: snapPosition.y,
+          });
+        } else {
+          // Regular grid snapping to 20px grid
+          const snappedX = Math.round(newX / 20) * 20;
+          const snappedY = Math.round(newY / 20) * 20;
 
-        // Simple grid snapping
-        const snappedX = Math.round(newX / 20) * 20;
-        const snappedY = Math.round(newY / 20) * 20;
-
-        updateBlock(block.id, {
-          x: snappedX,
-          y: snappedY,
-        });
+          updateBlock(block.id, {
+            x: snappedX,
+            y: snappedY,
+          });
+        }
       }
     }
-  }, [getBlock, updateBlock]);
+  }, [getBlock, updateBlock, blocks]);
 
   return (
     <DndContext onDragEnd={handleDragEnd}>

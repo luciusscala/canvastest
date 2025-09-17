@@ -16,7 +16,7 @@ export function Toolbar() {
       startTime: new Date(now.getTime() + 2 * 60 * 60 * 1000), // 2 hours from now
       endTime: new Date(now.getTime() + 7 * 60 * 60 * 1000), // 7 hours from now
       x: 100,
-      y: 150,
+      y: 100,
     };
     addBlock(flight);
   };
@@ -32,7 +32,7 @@ export function Toolbar() {
       startTime: new Date(now.getTime() + 8 * 60 * 60 * 1000), // 8 hours from now
       endTime: new Date(now.getTime() + 32 * 60 * 60 * 1000), // 32 hours from now (next day)
       x: 300,
-      y: 200,
+      y: 100,
     };
     addBlock(hotel);
   };
@@ -49,7 +49,7 @@ export function Toolbar() {
       startTime: new Date(now.getTime() + 12 * 60 * 60 * 1000), // 12 hours from now
       endTime: new Date(now.getTime() + 15 * 60 * 60 * 1000), // 15 hours from now
       x: 500,
-      y: 250,
+      y: 100,
     };
     addBlock(activity);
   };
