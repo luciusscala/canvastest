@@ -6,6 +6,7 @@ export interface TravelBlock {
   x: number;
   y: number;
   title: string;
+  duration: number; // Duration in days
 }
 
 export interface FlightBlock extends TravelBlock {

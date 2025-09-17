@@ -3,7 +3,7 @@ import { DndContext, type DragEndEvent, useDndMonitor } from '@dnd-kit/core';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { DraggableBlock } from './DraggableBlock';
 import { DotGrid } from './DotGrid';
-import { TemporalMarkers } from './TemporalMarkers';
+import { SnappingIndicator } from './SnappingIndicator';
 import { findNearbyConnectionPoints, calculateSnapPosition } from '../utils/blockConnections';
 
 interface CanvasProps {
@@ -17,6 +17,7 @@ function CanvasContent({ children }: CanvasProps) {
   const [isDragActive, setIsDragActive] = useState(false);
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const [snapPosition, setSnapPosition] = useState<{ x: number; y: number } | null>(null);
 
   const { blocks } = useCanvasStore();
 
@@ -27,6 +28,7 @@ function CanvasContent({ children }: CanvasProps) {
     },
     onDragEnd: () => {
       setIsDragActive(false);
+      setSnapPosition(null);
     },
   });
 
@@ -85,9 +87,6 @@ function CanvasContent({ children }: CanvasProps) {
       {/* Figma Jam-style dot grid background */}
       <DotGrid spacing={20} dotSize={1} />
       
-      {/* Temporal markers */}
-      <TemporalMarkers transform={transform} />
-      
       <div
         className="origin-top-left relative"
         style={{
@@ -101,6 +100,15 @@ function CanvasContent({ children }: CanvasProps) {
         {blocks.map((block) => (
           <DraggableBlock key={block.id} block={block} />
         ))}
+
+        {/* Snapping indicator */}
+        {snapPosition && (
+          <SnappingIndicator 
+            x={snapPosition.x} 
+            y={snapPosition.y} 
+            isVisible={isDragActive} 
+          />
+        )}
       </div>
     </div>
   );
@@ -133,18 +141,24 @@ export function Canvas({ children }: CanvasProps) {
             'start-to-end' // Default snap type
           );
           
-          updateBlock(block.id, {
-            x: snapPosition.x,
-            y: snapPosition.y,
+          // Use requestAnimationFrame for smoother updates
+          requestAnimationFrame(() => {
+            updateBlock(block.id, {
+              x: snapPosition.x,
+              y: snapPosition.y,
+            });
           });
         } else {
           // Regular grid snapping to 20px grid
           const snappedX = Math.round(newX / 20) * 20;
           const snappedY = Math.round(newY / 20) * 20;
 
-          updateBlock(block.id, {
-            x: snappedX,
-            y: snappedY,
+          // Use requestAnimationFrame for smoother updates
+          requestAnimationFrame(() => {
+            updateBlock(block.id, {
+              x: snappedX,
+              y: snappedY,
+            });
           });
         }
       }

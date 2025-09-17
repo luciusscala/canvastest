@@ -40,9 +40,15 @@ export function getConnectionPoints(block: TravelBlock): ConnectionPoint[] {
 
 // Calculate block width based on duration
 export function getBlockWidth(block: TravelBlock): number {
-  const duration = block.endTime.getTime() - block.startTime.getTime();
-  const hours = duration / (1000 * 60 * 60);
-  return Math.max(80, hours * 20); // 20px per hour, minimum 80px
+  const PIXELS_PER_DAY = 60; // Each day is 60 pixels wide
+  const EVENT_BLOCK_WIDTH = 80; // Width of the thick event blocks
+  
+  if (block.type === 'activity') {
+    return 80; // Activities are just single blocks
+  }
+  
+  // For flights and hotels, total width includes two event blocks plus timeline
+  return Math.max(160, block.duration * PIXELS_PER_DAY); // Minimum 160px width
 }
 
 // Check if two blocks can connect
@@ -73,7 +79,7 @@ export function canConnect(block1: TravelBlock, block2: TravelBlock): boolean {
 export function findNearbyConnectionPoints(
   draggedBlock: TravelBlock,
   allBlocks: TravelBlock[],
-  threshold: number = 30
+  threshold: number = 40
 ): ConnectionPoint[] {
   const draggedPoints = getConnectionPoints(draggedBlock);
   const nearbyPoints: ConnectionPoint[] = [];
@@ -91,13 +97,17 @@ export function findNearbyConnectionPoints(
         );
         
         if (distance <= threshold) {
-          nearbyPoints.push(blockPoint);
+          nearbyPoints.push({
+            ...blockPoint,
+            distance // Add distance for sorting
+          } as ConnectionPoint & { distance: number });
         }
       }
     }
   }
 
-  return nearbyPoints;
+  // Sort by distance to get the closest points first
+  return nearbyPoints.sort((a, b) => (a as any).distance - (b as any).distance);
 }
 
 // Calculate snap position for a block

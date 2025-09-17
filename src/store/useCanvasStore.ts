@@ -18,7 +18,6 @@ interface CanvasActions {
   selectBlock: (id: string | null) => void;
   updateViewport: (viewport: Partial<CanvasState['viewport']>) => void;
   getBlock: (id: string) => TravelBlock | undefined;
-  hasTemporalConflict: (block: TravelBlock) => boolean;
 }
 
 export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => ({
@@ -56,20 +55,5 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
 
   getBlock: (id) => get().blocks.find((block) => block.id === id),
 
-  hasTemporalConflict: (block) => {
-    const { blocks } = get();
-    return blocks.some((otherBlock) => {
-      if (otherBlock.id === block.id) return false;
-
-      const blockStart = block.startTime.getTime();
-      const blockEnd = block.endTime.getTime();
-      const otherStart = otherBlock.startTime.getTime();
-      const otherEnd = otherBlock.endTime.getTime();
-
-      return (
-        (blockStart < otherEnd && blockEnd > otherStart) ||
-        (otherStart < blockEnd && otherEnd > blockStart)
-      );
-    });
-  },
+  // Removed temporal conflict checking since we're using a regular grid now
 }));

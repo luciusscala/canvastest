@@ -6,6 +6,10 @@ export function Toolbar() {
 
   const addSampleFlight = () => {
     const now = new Date();
+    const startTime = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours from now
+    const endTime = new Date(now.getTime() + 7 * 60 * 60 * 1000); // 7 hours from now
+    const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60 * 24); // Convert to days
+    
     const flight: FlightBlock = {
       id: `flight-${Date.now()}`,
       type: 'flight',
@@ -13,8 +17,9 @@ export function Toolbar() {
       from: 'NYC',
       to: 'LAX',
       flightNumber: 'AA123',
-      startTime: new Date(now.getTime() + 2 * 60 * 60 * 1000), // 2 hours from now
-      endTime: new Date(now.getTime() + 7 * 60 * 60 * 1000), // 7 hours from now
+      startTime,
+      endTime,
+      duration,
       x: 100,
       y: 100,
     };
@@ -23,14 +28,19 @@ export function Toolbar() {
 
   const addSampleHotel = () => {
     const now = new Date();
+    const startTime = new Date(now.getTime() + 8 * 60 * 60 * 1000); // 8 hours from now
+    const endTime = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000); // 4 days from now
+    const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60 * 24); // Convert to days
+    
     const hotel: HotelBlock = {
       id: `hotel-${Date.now()}`,
       type: 'hotel',
       title: 'Sample Hotel',
       name: 'Grand Plaza Hotel',
       location: 'Los Angeles, CA',
-      startTime: new Date(now.getTime() + 8 * 60 * 60 * 1000), // 8 hours from now
-      endTime: new Date(now.getTime() + 32 * 60 * 60 * 1000), // 32 hours from now (next day)
+      startTime,
+      endTime,
+      duration,
       x: 300,
       y: 100,
     };
@@ -39,6 +49,10 @@ export function Toolbar() {
 
   const addSampleActivity = () => {
     const now = new Date();
+    const startTime = new Date(now.getTime() + 12 * 60 * 60 * 1000); // 12 hours from now
+    const endTime = new Date(now.getTime() + 15 * 60 * 60 * 1000); // 15 hours from now
+    const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60 * 24); // Convert to days
+    
     const activity: ActivityBlock = {
       id: `activity-${Date.now()}`,
       type: 'activity',
@@ -46,8 +60,9 @@ export function Toolbar() {
       name: 'Hollywood Tour',
       location: 'Hollywood, CA',
       description: 'Guided tour of famous landmarks',
-      startTime: new Date(now.getTime() + 12 * 60 * 60 * 1000), // 12 hours from now
-      endTime: new Date(now.getTime() + 15 * 60 * 60 * 1000), // 15 hours from now
+      startTime,
+      endTime,
+      duration,
       x: 500,
       y: 100,
     };

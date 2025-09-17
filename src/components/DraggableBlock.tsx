@@ -4,7 +4,7 @@ import type { TravelBlock } from '../types/index';
 import { FlightBlock } from './blocks/FlightBlock';
 import { HotelBlock } from './blocks/HotelBlock';
 import { ActivityBlock } from './blocks/ActivityBlock';
-import { ScratchBlock } from './ScratchBlock';
+import { TimelineBlock } from './TimelineBlock';
 import { useCanvasStore } from '../store/useCanvasStore';
 
 interface DraggableBlockProps {
@@ -12,9 +12,8 @@ interface DraggableBlockProps {
 }
 
 export function DraggableBlock({ block }: DraggableBlockProps) {
-  const { selectBlock, hasTemporalConflict } = useCanvasStore();
+  const { selectBlock } = useCanvasStore();
   const [isHovered, setIsHovered] = useState(false);
-  const hasConflict = hasTemporalConflict(block);
 
   const {
     attributes,
@@ -28,7 +27,10 @@ export function DraggableBlock({ block }: DraggableBlockProps) {
 
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-  } : undefined;
+    transition: isDragging ? 'none' : 'transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+  } : {
+    transition: 'transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+  };
 
   const handleClick = () => {
     selectBlock(block.id);
@@ -57,14 +59,14 @@ export function DraggableBlock({ block }: DraggableBlockProps) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <ScratchBlock
+      <TimelineBlock
         block={block}
         isSelected={false}
         isHovered={isHovered}
         isDragging={isDragging}
       >
         {renderBlock()}
-      </ScratchBlock>
+      </TimelineBlock>
     </div>
   );
 }
