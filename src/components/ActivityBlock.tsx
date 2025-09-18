@@ -2,6 +2,18 @@ import { useState, useRef } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import type { ActivityBlock } from '../types/index';
 import { useCanvasStore } from '../store/useCanvasStore';
+import { useSnapping } from '../hooks/useSnapping';
+import { SnappingIndicator } from './SnappingIndicator';
+
+type KonvaEvent = {
+  target: {
+    x(): number;
+    y(): number;
+    x(value: number): void;
+    y(value: number): void;
+  };
+  cancelBubble: boolean;
+};
 
 interface ActivityBlockProps {
   block: ActivityBlock;
@@ -10,12 +22,25 @@ interface ActivityBlockProps {
 }
 
 export function ActivityBlock({ block, onDragStart, onDragEnd }: ActivityBlockProps) {
-  const { selectBlock, updateBlock } = useCanvasStore();
+  const { selectBlock, updateBlock, blocks } = useCanvasStore();
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const groupRef = useRef<any>(null);
 
-  const handleClick = (e: any) => {
+  const { snappingResult, handleDragMove, handleDragEnd: handleSnapDragEnd } = useSnapping(
+    block,
+    blocks,
+    (snapResult) => {
+      if (snapResult?.shouldSnap) {
+        updateBlock(block.id, {
+          x: snapResult.snapX,
+          y: snapResult.snapY,
+        });
+      }
+    }
+  );
+
+  const handleClick = (e: KonvaEvent) => {
     e.cancelBubble = true; // Prevent event bubbling to stage
     console.log('ActivityBlock clicked:', block.id);
     selectBlock(block.id);
@@ -26,27 +51,12 @@ export function ActivityBlock({ block, onDragStart, onDragEnd }: ActivityBlockPr
     onDragStart(); // Notify parent that we're dragging
   };
 
-  const handleDragEnd = (e: any) => {
+  const handleDragEnd = (e: KonvaEvent) => {
     setIsDragging(false);
     onDragEnd(); // Notify parent that we're done dragging
     
-    // Get the final position
-    const finalX = e.target.x();
-    const finalY = e.target.y();
-    
-    // Snap to grid
-    const snappedX = Math.round(finalX / 20) * 20;
-    const snappedY = Math.round(finalY / 20) * 20;
-    
-    // Update block position in store
-    updateBlock(block.id, {
-      x: snappedX,
-      y: snappedY,
-    });
-    
-    // Reset position to snapped coordinates
-    e.target.x(snappedX);
-    e.target.y(snappedY);
+    // Use the simplified snapping logic
+    handleSnapDragEnd(e);
   };
 
   const handleMouseEnter = () => {
@@ -65,6 +75,7 @@ export function ActivityBlock({ block, onDragStart, onDragEnd }: ActivityBlockPr
       draggable
       onClick={handleClick}
       onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -111,6 +122,15 @@ export function ActivityBlock({ block, onDragStart, onDragEnd }: ActivityBlockPr
         align="left"
         listening={false}
       />
+      
+      {/* Snapping indicator */}
+      {snappingResult && (
+        <SnappingIndicator
+          snappingResult={snappingResult}
+          blockWidth={block.width}
+          blockHeight={block.height}
+        />
+      )}
     </Group>
   );
 }

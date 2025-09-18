@@ -5,6 +5,7 @@ import { DraggableBlock } from './DraggableBlock';
 import { FlightBlock } from './FlightBlock';
 import { HotelBlock } from './HotelBlock';
 import { ActivityBlock } from './ActivityBlock';
+import { SnappingIndicator } from './SnappingIndicator';
 import type { FlightBlock as FlightBlockType, FlightSegment, HotelBlock as HotelBlockType, HotelEvent, ActivityBlock as ActivityBlockType } from '../types/index';
 
 // Efficient grid that covers the entire viewport

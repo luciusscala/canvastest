@@ -9,6 +9,7 @@ interface CanvasState {
     y: number;
     scale: number;
   };
+  parentChildRelations: Record<string, string>; // childId -> parentId
 }
 
 interface CanvasActions {
@@ -18,12 +19,15 @@ interface CanvasActions {
   selectBlock: (id: string | null) => void;
   updateViewport: (viewport: Partial<CanvasState['viewport']>) => void;
   getBlock: (id: string) => (CanvasBlock | FlightBlock | HotelBlock | ActivityBlock) | undefined;
+  setParentChildRelation: (childId: string, parentId: string | null) => void;
+  getChildren: (parentId: string) => (CanvasBlock | FlightBlock | HotelBlock | ActivityBlock)[];
 }
 
 export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => ({
   blocks: [],
   selectedBlockId: null,
   viewport: { x: 0, y: 0, scale: 1 },
+  parentChildRelations: {},
 
   addBlock: (block) =>
     set((state) => ({
@@ -38,10 +42,23 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
     })),
 
   removeBlock: (id) =>
-    set((state) => ({
-      blocks: state.blocks.filter((block) => block.id !== id),
-      selectedBlockId: state.selectedBlockId === id ? null : state.selectedBlockId,
-    })),
+    set((state) => {
+      const newRelations = { ...state.parentChildRelations };
+      // Remove this block as a parent
+      delete newRelations[id];
+      // Remove this block as a child
+      Object.keys(newRelations).forEach(childId => {
+        if (newRelations[childId] === id) {
+          delete newRelations[childId];
+        }
+      });
+      
+      return {
+        blocks: state.blocks.filter((block) => block.id !== id),
+        selectedBlockId: state.selectedBlockId === id ? null : state.selectedBlockId,
+        parentChildRelations: newRelations,
+      };
+    }),
 
   selectBlock: (id) =>
     set(() => ({
@@ -54,4 +71,22 @@ export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => 
     })),
 
   getBlock: (id) => get().blocks.find((block) => block.id === id),
-}));
+
+  setParentChildRelation: (childId, parentId) =>
+    set((state) => {
+      const newRelations = { ...state.parentChildRelations };
+      if (parentId === null) {
+        delete newRelations[childId];
+      } else {
+        newRelations[childId] = parentId;
+      }
+      return { parentChildRelations: newRelations };
+    }),
+
+  getChildren: (parentId) => {
+    const state = get();
+    return state.blocks.filter(block => 
+      state.parentChildRelations[block.id] === parentId
+    );
+  },
+});
