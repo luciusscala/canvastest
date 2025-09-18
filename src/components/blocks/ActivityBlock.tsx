@@ -5,12 +5,10 @@ interface ActivityBlockProps {
 }
 
 export function ActivityBlock({ block }: ActivityBlockProps) {
-  // Activity blocks are simple single blocks, no duration calculation needed
-
   return (
-    <div className="text-white">
+    <div className="text-white text-center">
       <div className="font-bold text-sm drop-shadow-sm">{block.name}</div>
-      <div className="text-xs drop-shadow-sm">{block.location}</div>
+      <div className="text-xs opacity-90 font-medium">{block.location}</div>
     </div>
   );
 }

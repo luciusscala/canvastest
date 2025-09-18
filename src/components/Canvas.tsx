@@ -88,7 +88,7 @@ function CanvasContent({ children }: CanvasProps) {
   return (
     <div
       ref={canvasRef}
-      className="w-full h-screen overflow-hidden bg-white cursor-grab active:cursor-grabbing"
+      className="w-full h-screen overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 cursor-grab active:cursor-grabbing"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}

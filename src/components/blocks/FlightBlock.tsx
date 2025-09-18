@@ -5,14 +5,11 @@ interface FlightBlockProps {
 }
 
 export function FlightBlock({ block }: FlightBlockProps) {
-  // Duration is already in hours
-  const hours = Math.round(block.duration * 10) / 10;
-
   return (
-    <div className="text-black text-center">
-      <div className="font-bold text-sm">{block.from} → {block.to}</div>
+    <div className="text-white text-center">
+      <div className="font-bold text-sm drop-shadow-sm">{block.from} → {block.to}</div>
       {block.flightNumber && (
-        <div className="text-xs">{block.flightNumber}</div>
+        <div className="text-xs opacity-90 font-medium">{block.flightNumber}</div>
       )}
     </div>
   );

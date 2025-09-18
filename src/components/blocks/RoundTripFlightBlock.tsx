@@ -6,9 +6,9 @@ interface RoundTripFlightBlockProps {
 
 export function RoundTripFlightBlock({ block }: RoundTripFlightBlockProps) {
   return (
-    <div className="text-black text-center">
-      <div className="font-bold text-sm">{block.departureFrom} → {block.departureTo}</div>
-      <div className="text-xs">{block.returnFrom} → {block.returnTo}</div>
+    <div className="text-white text-center">
+      <div className="font-bold text-sm drop-shadow-sm">{block.departureFrom} → {block.departureTo}</div>
+      <div className="text-xs opacity-90 font-medium">{block.returnFrom} → {block.returnTo}</div>
     </div>
   );
 }
