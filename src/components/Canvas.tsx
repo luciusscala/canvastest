@@ -3,7 +3,8 @@ import { Stage, Layer, Text, Line } from 'react-konva';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { DraggableBlock } from './DraggableBlock';
 import { FlightBlock } from './FlightBlock';
-import type { FlightBlock as FlightBlockType, FlightSegment } from '../types/index';
+import { HotelBlock } from './HotelBlock';
+import type { FlightBlock as FlightBlockType, FlightSegment, HotelBlock as HotelBlockType, HotelEvent } from '../types/index';
 
 // Efficient grid that covers the entire viewport
 function SimpleGrid({ stageWidth, stageHeight, spacing = 20 }: { stageWidth: number; stageHeight: number; spacing?: number }) {
@@ -118,6 +119,41 @@ export function Canvas() {
     };
   }, []);
 
+  // Create a sample hotel block
+  const createHotelBlock = useCallback((x: number, y: number): HotelBlockType => {
+    const events: HotelEvent[] = [
+      {
+        id: `event-${Date.now()}-1`,
+        type: 'checkin',
+        date: 'Dec 15',
+        hotelName: 'Grand Hotel'
+      },
+      {
+        id: `event-${Date.now()}-2`,
+        type: 'checkout',
+        date: 'Dec 18',
+        hotelName: 'Grand Hotel'
+      }
+    ];
+
+    return {
+      id: `hotel-${Date.now()}`,
+      type: 'hotel',
+      x: x,
+      y: y,
+      width: 600, // Wider for hotel stays
+      height: 100,
+      title: 'Hotel Block',
+      totalDays: 3, // 3-day stay
+      events,
+      contextBarHeight: 20,
+      eventHeight: 60,
+      hotelName: 'Grand Hotel',
+      location: 'San Francisco',
+      color: '#f3f4f6'
+    };
+  }, []);
+
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
@@ -210,8 +246,9 @@ export function Canvas() {
       const snappedX = Math.round(x / 20) * 20;
       const snappedY = Math.round(y / 20) * 20;
 
-      // Alternate between regular blocks and flight blocks
-      if (blocks.length % 2 === 0) {
+      // Cycle through regular blocks, flight blocks, and hotel blocks
+      const blockType = blocks.length % 3;
+      if (blockType === 0) {
         // Create a regular block
         const newBlock = {
           id: `block-${Date.now()}`,
@@ -223,13 +260,17 @@ export function Canvas() {
           color: `hsl(${(blocks.length * 137.5) % 360}, 70%, 80%)`,
         };
         addBlock(newBlock);
-      } else {
+      } else if (blockType === 1) {
         // Create a flight block
         const flightBlock = createFlightBlock(snappedX, snappedY);
         addBlock(flightBlock);
+      } else {
+        // Create a hotel block
+        const hotelBlock = createHotelBlock(snappedX, snappedY);
+        addBlock(hotelBlock);
       }
     }
-  }, [stagePosition, stageScale, addBlock, blocks.length, createFlightBlock]);
+  }, [stagePosition, stageScale, addBlock, blocks.length, createFlightBlock, createHotelBlock]);
 
 
 
@@ -282,6 +323,15 @@ export function Canvas() {
                 <FlightBlock
                   key={block.id}
                   block={block as FlightBlockType}
+                  onDragStart={handleBlockDragStart}
+                  onDragEnd={handleBlockDragEnd}
+                />
+              );
+            } else if ('type' in block && block.type === 'hotel') {
+              return (
+                <HotelBlock
+                  key={block.id}
+                  block={block as HotelBlockType}
                   onDragStart={handleBlockDragStart}
                   onDragEnd={handleBlockDragEnd}
                 />

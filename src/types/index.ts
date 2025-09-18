@@ -28,3 +28,20 @@ export interface FlightBlock extends CanvasBlock {
   departureAirport: string;
   arrivalAirport: string;
 }
+
+export interface HotelEvent {
+  id: string;
+  type: 'checkin' | 'checkout';
+  date: string; // Date string (e.g., "Dec 15")
+  hotelName: string;
+}
+
+export interface HotelBlock extends CanvasBlock {
+  type: 'hotel';
+  totalDays: number; // Total stay duration in days
+  events: HotelEvent[];
+  contextBarHeight: number;
+  eventHeight: number;
+  hotelName: string;
+  location: string;
+}
