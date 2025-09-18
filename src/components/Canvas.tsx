@@ -70,26 +70,33 @@ export function Canvas() {
     const segments: FlightSegment[] = [
       {
         id: `segment-${Date.now()}-1`,
-        startDay: 0,
-        duration: 1,
+        startTime: 0, // Day 0, 8:00 AM
+        duration: 2.5, // 2.5 hours
         type: 'outbound',
         flightNumber: 'AA123',
+        departure: 'JFK',
+        arrival: 'LAX',
         label: 'AA123'
       },
       {
         id: `segment-${Date.now()}-2`,
-        startDay: 2,
-        duration: 2,
-        type: 'layover',
-        label: 'Layover'
+        startTime: 24, // Day 1, 8:00 AM
+        duration: 1.5, // 1.5 hours
+        type: 'connecting',
+        flightNumber: 'AA456',
+        departure: 'LAX',
+        arrival: 'SFO',
+        label: 'AA456'
       },
       {
         id: `segment-${Date.now()}-3`,
-        startDay: 4,
-        duration: 1,
+        startTime: 162.5, // Day 6, 6:30 PM (near end of 7-day period)
+        duration: 5.5, // 5.5 hours
         type: 'return',
-        flightNumber: 'AA456',
-        label: 'AA456'
+        flightNumber: 'AA789',
+        departure: 'SFO',
+        arrival: 'JFK',
+        label: 'AA789'
       }
     ];
 
@@ -98,13 +105,15 @@ export function Canvas() {
       type: 'flight',
       x: x,
       y: y,
-      width: 200,
-      height: 80,
+      width: 800, // Much wider
+      height: 150, // Much taller
       title: 'Flight Block',
-      totalDays: 7,
+      totalHours: 168, // 7 days = 168 hours
       segments,
-      contextBarHeight: 12,
-      segmentHeight: 40,
+      contextBarHeight: 24, // Taller context bar
+      segmentHeight: 80, // Much taller segments
+      departureAirport: 'JFK',
+      arrivalAirport: 'JFK',
       color: '#f3f4f6'
     };
   }, []);
@@ -172,8 +181,8 @@ export function Canvas() {
       y: (pointer.y - stage.y()) / oldScale,
     };
 
-    // Apply much more sensitivity reduction
-    const sensitivity = 0.15; // Much lower = much less sensitive
+    // Apply sensitivity reduction
+    const sensitivity = 0.25; // Slightly more responsive than before
     const deltaY = e.evt.deltaY * sensitivity;
     const scaleFactor = deltaY > 0 ? scaleBy : 1 / scaleBy;
     
@@ -222,6 +231,8 @@ export function Canvas() {
     }
   }, [stagePosition, stageScale, addBlock, blocks.length, createFlightBlock]);
 
+
+
   return (
     <div className="w-full h-screen bg-gradient-to-br from-slate-50 to-slate-100 relative">
       {/* Instructions */}
@@ -258,7 +269,7 @@ export function Canvas() {
           <Text
             x={20}
             y={20}
-            text="Double-click to add blocks (alternates between regular & flight blocks) • Drag to pan • Scroll to zoom"
+            text="Double-click to add blocks • Drag to pan • Scroll to zoom"
             fontSize={14}
             fill="#64748b"
             listening={false}
@@ -288,6 +299,7 @@ export function Canvas() {
           })}
         </Layer>
       </Stage>
+
     </div>
   );
 }

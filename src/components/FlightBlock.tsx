@@ -13,7 +13,7 @@ interface FlightBlockProps {
 const SEGMENT_COLORS = {
   outbound: '#dc2626', // Red
   return: '#2563eb',   // Blue
-  layover: '#7c3aed',  // Purple
+  connecting: '#059669', // Green
 };
 
 export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps) {
@@ -25,6 +25,7 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
 
   const handleClick = (e: any) => {
     e.cancelBubble = true; // Prevent event bubbling to stage
+    console.log('FlightBlock clicked:', block.id);
     selectBlock(block.id);
   };
 
@@ -70,10 +71,12 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
     selectBlock(block.id);
   };
 
-  // Calculate segment position and width based on startDay and duration
+  // Calculate segment position and width based on startTime and duration
   const getSegmentDimensions = (segment: FlightSegment) => {
-    const segmentX = (segment.startDay / block.totalDays) * block.width;
-    const segmentWidth = (segment.duration / block.totalDays) * block.width;
+    // Ensure we use the block's width consistently
+    const contextWidth = block.width || 800;
+    const segmentX = (segment.startTime / block.totalHours) * contextWidth;
+    const segmentWidth = (segment.duration / block.totalHours) * contextWidth;
     return { x: segmentX, width: segmentWidth };
   };
 
@@ -103,8 +106,7 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
         shadowBlur={isHovered ? 6 : 3}
         shadowOffset={{ x: 0, y: 2 }}
         shadowOpacity={1}
-        scaleX={isDragging ? 1.02 : 1}
-        scaleY={isDragging ? 1.02 : 1}
+        // Remove scaling effects that might cause width changes
         opacity={isDragging ? 0.9 : 1}
       />
 
@@ -132,30 +134,88 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
               shadowOpacity={1}
             />
             
-            {/* Segment label (flight number or layover info) */}
-            {segment.label && (
-              <Text
-                x={segmentX + 4}
-                y={block.segmentHeight + 2}
-                text={segment.label}
-                fontSize={10}
-                fontFamily="Inter, system-ui, sans-serif"
-                fill="#374151"
-                width={segmentWidth - 8}
-                align="center"
-                listening={false}
-              />
-            )}
+            
           </Group>
         );
       })}
 
-      {/* Trip duration label */}
+      {/* Color-coded key above the block */}
+      <Rect
+        x={0}
+        y={-60}
+        width={block.width}
+        height={50}
+        fill="#ffffff"
+        stroke="#e5e7eb"
+        strokeWidth={1}
+        cornerRadius={6}
+        shadowColor="rgba(0, 0, 0, 0.1)"
+        shadowBlur={4}
+        shadowOffset={{ x: 0, y: 2 }}
+        shadowOpacity={1}
+        listening={false}
+      />
+      
+      {/* Flight segments key */}
+      {block.segments.map((segment, index) => {
+        const keyX = 10 + (index * 200); // Space segments horizontally
+        const { x: segmentX, width: segmentWidth } = getSegmentDimensions(segment);
+        
+        return (
+          <Group key={`key-${segment.id}`}>
+            {/* Color indicator */}
+            <Rect
+              x={keyX}
+              y={-50}
+              width={12}
+              height={12}
+              fill={SEGMENT_COLORS[segment.type]}
+              cornerRadius={2}
+              listening={false}
+            />
+            
+            {/* Flight info */}
+            <Text
+              x={keyX + 18}
+              y={-48}
+              text={`${segment.flightNumber} (${segment.departure}→${segment.arrival}) - ${segment.duration}h`}
+              fontSize={10}
+              fontFamily="Inter, system-ui, sans-serif"
+              fill="#374151"
+              listening={false}
+            />
+            
+            {/* Type label */}
+            <Text
+              x={keyX + 18}
+              y={-36}
+              text={segment.type.toUpperCase()}
+              fontSize={8}
+              fontFamily="Inter, system-ui, sans-serif"
+              fill="#6b7280"
+              listening={false}
+            />
+          </Group>
+        );
+      })}
+      
+      {/* Route summary */}
       <Text
-        x={4}
-        y={block.contextBarHeight + 2}
-        text={`${block.totalDays} days`}
-        fontSize={12}
+        x={6}
+        y={block.contextBarHeight + 4}
+        text={`${block.departureAirport} → ${block.arrivalAirport}`}
+        fontSize={14}
+        fontFamily="Inter, system-ui, sans-serif"
+        fill="#374151"
+        listening={false}
+      />
+      
+      {/* Duration in days */}
+      <Text
+        x={6}
+        y={block.contextBarHeight + 22}
+        text={`${Math.round(block.totalHours / 24)}d`}
+        fontSize={11}
         fontFamily="Inter, system-ui, sans-serif"
         fill="#6b7280"
         listening={false}

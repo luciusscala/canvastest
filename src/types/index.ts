@@ -10,17 +10,21 @@ export interface CanvasBlock {
 
 export interface FlightSegment {
   id: string;
-  startDay: number; // Day within the trip (0-based)
-  duration: number; // Duration in days
-  type: 'outbound' | 'return' | 'layover';
-  flightNumber?: string;
+  startTime: number; // Start time in hours (0-24)
+  duration: number; // Duration in hours
+  type: 'outbound' | 'return' | 'connecting';
+  flightNumber: string;
+  departure: string; // Airport code
+  arrival: string; // Airport code
   label?: string;
 }
 
 export interface FlightBlock extends CanvasBlock {
   type: 'flight';
-  totalDays: number;
+  totalHours: number; // Total time span in hours (e.g., 24 for a day)
   segments: FlightSegment[];
   contextBarHeight: number;
   segmentHeight: number;
+  departureAirport: string;
+  arrivalAirport: string;
 }
