@@ -199,27 +199,6 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
         );
       })}
       
-      {/* Route summary */}
-      <Text
-        x={6}
-        y={block.contextBarHeight + 4}
-        text={`${block.departureAirport} → ${block.arrivalAirport}`}
-        fontSize={14}
-        fontFamily="Inter, system-ui, sans-serif"
-        fill="#374151"
-        listening={false}
-      />
-      
-      {/* Duration in days */}
-      <Text
-        x={6}
-        y={block.contextBarHeight + 22}
-        text={`${Math.round(block.totalHours / 24)}d`}
-        fontSize={11}
-        fontFamily="Inter, system-ui, sans-serif"
-        fill="#6b7280"
-        listening={false}
-      />
     </Group>
   );
 }
