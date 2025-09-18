@@ -2,6 +2,8 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import { Stage, Layer, Text, Line } from 'react-konva';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { DraggableBlock } from './DraggableBlock';
+import { FlightBlock } from './FlightBlock';
+import type { FlightBlock as FlightBlockType, FlightSegment } from '../types/index';
 
 // Efficient grid that covers the entire viewport
 function SimpleGrid({ stageWidth, stageHeight, spacing = 20 }: { stageWidth: number; stageHeight: number; spacing?: number }) {
@@ -63,6 +65,50 @@ export function Canvas() {
     setIsDraggingBlock(false);
   }, []);
 
+  // Create a sample flight block
+  const createFlightBlock = useCallback((x: number, y: number): FlightBlockType => {
+    const segments: FlightSegment[] = [
+      {
+        id: `segment-${Date.now()}-1`,
+        startDay: 0,
+        duration: 1,
+        type: 'outbound',
+        flightNumber: 'AA123',
+        label: 'AA123'
+      },
+      {
+        id: `segment-${Date.now()}-2`,
+        startDay: 2,
+        duration: 2,
+        type: 'layover',
+        label: 'Layover'
+      },
+      {
+        id: `segment-${Date.now()}-3`,
+        startDay: 4,
+        duration: 1,
+        type: 'return',
+        flightNumber: 'AA456',
+        label: 'AA456'
+      }
+    ];
+
+    return {
+      id: `flight-${Date.now()}`,
+      type: 'flight',
+      x: x,
+      y: y,
+      width: 200,
+      height: 80,
+      title: 'Flight Block',
+      totalDays: 7,
+      segments,
+      contextBarHeight: 12,
+      segmentHeight: 40,
+      color: '#f3f4f6'
+    };
+  }, []);
+
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
@@ -74,7 +120,7 @@ export function Canvas() {
   }, []);
 
   // Handle stage drag (panning) - only when not dragging blocks
-  const handleStageDragStart = useCallback((e: any) => {
+  const handleStageDragStart = useCallback(() => {
     // Only start panning if we're not dragging a block
     if (isDraggingBlock) return;
     
@@ -82,7 +128,7 @@ export function Canvas() {
     setLastPointerPosition(stageRef.current.getPointerPosition());
   }, [isDraggingBlock]);
 
-  const handleStageDragMove = useCallback((e: any) => {
+  const handleStageDragMove = useCallback(() => {
     if (!isPanning || isDraggingBlock) return;
 
     const stage = stageRef.current;
@@ -91,7 +137,7 @@ export function Canvas() {
     const deltaY = newPos.y - lastPointerPosition.y;
 
     // Apply pan sensitivity reduction
-    const panSensitivity = 0.8; // Lower = less sensitive (0.5-1.0 range)
+    const panSensitivity = 0.6; // Much lower = much less sensitive (0.5-1.0 range)
     const adjustedDeltaX = deltaX * panSensitivity;
     const adjustedDeltaY = deltaY * panSensitivity;
 
@@ -155,20 +201,26 @@ export function Canvas() {
       const snappedX = Math.round(x / 20) * 20;
       const snappedY = Math.round(y / 20) * 20;
 
-      // Create a new block
-      const newBlock = {
-        id: `block-${Date.now()}`,
-        x: snappedX,
-        y: snappedY,
-        width: 120,
-        height: 60,
-        title: `Block ${blocks.length + 1}`,
-        color: `hsl(${(blocks.length * 137.5) % 360}, 70%, 80%)`,
-      };
-
-      addBlock(newBlock);
+      // Alternate between regular blocks and flight blocks
+      if (blocks.length % 2 === 0) {
+        // Create a regular block
+        const newBlock = {
+          id: `block-${Date.now()}`,
+          x: snappedX,
+          y: snappedY,
+          width: 120,
+          height: 60,
+          title: `Block ${blocks.length + 1}`,
+          color: `hsl(${(blocks.length * 137.5) % 360}, 70%, 80%)`,
+        };
+        addBlock(newBlock);
+      } else {
+        // Create a flight block
+        const flightBlock = createFlightBlock(snappedX, snappedY);
+        addBlock(flightBlock);
+      }
     }
-  }, [stagePosition, stageScale, addBlock, blocks.length]);
+  }, [stagePosition, stageScale, addBlock, blocks.length, createFlightBlock]);
 
   return (
     <div className="w-full h-screen bg-gradient-to-br from-slate-50 to-slate-100 relative">
@@ -206,21 +258,34 @@ export function Canvas() {
           <Text
             x={20}
             y={20}
-            text="Double-click to add blocks • Drag to pan • Scroll to zoom"
+            text="Double-click to add blocks (alternates between regular & flight blocks) • Drag to pan • Scroll to zoom"
             fontSize={14}
             fill="#64748b"
             listening={false}
           />
           
-          {/* Render draggable blocks */}
-          {blocks.map((block) => (
-            <DraggableBlock 
-              key={block.id} 
-              block={block}
-              onDragStart={handleBlockDragStart}
-              onDragEnd={handleBlockDragEnd}
-            />
-          ))}
+          {/* Render blocks */}
+          {blocks.map((block) => {
+            if ('type' in block && block.type === 'flight') {
+              return (
+                <FlightBlock
+                  key={block.id}
+                  block={block as FlightBlockType}
+                  onDragStart={handleBlockDragStart}
+                  onDragEnd={handleBlockDragEnd}
+                />
+              );
+            } else {
+              return (
+                <DraggableBlock 
+                  key={block.id} 
+                  block={block}
+                  onDragStart={handleBlockDragStart}
+                  onDragEnd={handleBlockDragEnd}
+                />
+              );
+            }
+          })}
         </Layer>
       </Stage>
     </div>
