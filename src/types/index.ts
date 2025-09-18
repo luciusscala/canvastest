@@ -45,3 +45,10 @@ export interface HotelBlock extends CanvasBlock {
   hotelName: string;
   location: string;
 }
+
+export interface ActivityBlock extends CanvasBlock {
+  type: 'activity';
+  duration: number; // Duration in hours
+  activityType: string; // e.g., "sightseeing", "dining", "shopping"
+  location: string;
+}

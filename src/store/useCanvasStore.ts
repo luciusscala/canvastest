@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import type { CanvasBlock, FlightBlock, HotelBlock } from '../types/index';
+import type { CanvasBlock, FlightBlock, HotelBlock, ActivityBlock } from '../types/index';
 
 interface CanvasState {
-  blocks: (CanvasBlock | FlightBlock | HotelBlock)[];
+  blocks: (CanvasBlock | FlightBlock | HotelBlock | ActivityBlock)[];
   selectedBlockId: string | null;
   viewport: {
     x: number;
@@ -12,12 +12,12 @@ interface CanvasState {
 }
 
 interface CanvasActions {
-  addBlock: (block: CanvasBlock | FlightBlock | HotelBlock) => void;
-  updateBlock: (id: string, updates: Partial<CanvasBlock | FlightBlock | HotelBlock>) => void;
+  addBlock: (block: CanvasBlock | FlightBlock | HotelBlock | ActivityBlock) => void;
+  updateBlock: (id: string, updates: Partial<CanvasBlock | FlightBlock | HotelBlock | ActivityBlock>) => void;
   removeBlock: (id: string) => void;
   selectBlock: (id: string | null) => void;
   updateViewport: (viewport: Partial<CanvasState['viewport']>) => void;
-  getBlock: (id: string) => (CanvasBlock | FlightBlock | HotelBlock) | undefined;
+  getBlock: (id: string) => (CanvasBlock | FlightBlock | HotelBlock | ActivityBlock) | undefined;
 }
 
 export const useCanvasStore = create<CanvasState & CanvasActions>((set, get) => ({

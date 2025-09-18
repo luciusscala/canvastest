@@ -4,7 +4,8 @@ import { useCanvasStore } from '../store/useCanvasStore';
 import { DraggableBlock } from './DraggableBlock';
 import { FlightBlock } from './FlightBlock';
 import { HotelBlock } from './HotelBlock';
-import type { FlightBlock as FlightBlockType, FlightSegment, HotelBlock as HotelBlockType, HotelEvent } from '../types/index';
+import { ActivityBlock } from './ActivityBlock';
+import type { FlightBlock as FlightBlockType, FlightSegment, HotelBlock as HotelBlockType, HotelEvent, ActivityBlock as ActivityBlockType } from '../types/index';
 
 // Efficient grid that covers the entire viewport
 function SimpleGrid({ stageWidth, stageHeight, spacing = 20 }: { stageWidth: number; stageHeight: number; spacing?: number }) {
@@ -154,6 +155,36 @@ export function Canvas() {
     };
   }, []);
 
+  // Create a sample activity block
+  const createActivityBlock = useCallback((x: number, y: number): ActivityBlockType => {
+    const duration = Math.random() * 4 + 1; // 1-5 hours
+    const width = duration * 60; // Scale width based on duration (60px per hour)
+    
+    const activities = [
+      { name: 'Museum Visit', type: 'sightseeing', color: '#8b5cf6' },
+      { name: 'Restaurant Dinner', type: 'dining', color: '#f59e0b' },
+      { name: 'Shopping', type: 'shopping', color: '#10b981' },
+      { name: 'City Tour', type: 'sightseeing', color: '#3b82f6' },
+      { name: 'Beach Time', type: 'leisure', color: '#06b6d4' }
+    ];
+    
+    const activity = activities[Math.floor(Math.random() * activities.length)];
+
+    return {
+      id: `activity-${Date.now()}`,
+      type: 'activity',
+      x: x,
+      y: y,
+      width: width,
+      height: 60, // Fixed height
+      title: activity.name,
+      duration: Math.round(duration * 10) / 10, // Round to 1 decimal
+      activityType: activity.type,
+      location: 'San Francisco',
+      color: activity.color
+    };
+  }, []);
+
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
@@ -218,7 +249,7 @@ export function Canvas() {
     };
 
     // Apply sensitivity reduction
-    const sensitivity = 0.25; // Slightly more responsive than before
+    const sensitivity = 0.5; // More sensitive zoom
     const deltaY = e.evt.deltaY * sensitivity;
     const scaleFactor = deltaY > 0 ? scaleBy : 1 / scaleBy;
     
@@ -246,8 +277,8 @@ export function Canvas() {
       const snappedX = Math.round(x / 20) * 20;
       const snappedY = Math.round(y / 20) * 20;
 
-      // Cycle through regular blocks, flight blocks, and hotel blocks
-      const blockType = blocks.length % 3;
+      // Cycle through regular blocks, flight blocks, hotel blocks, and activity blocks
+      const blockType = blocks.length % 4;
       if (blockType === 0) {
         // Create a regular block
         const newBlock = {
@@ -264,13 +295,17 @@ export function Canvas() {
         // Create a flight block
         const flightBlock = createFlightBlock(snappedX, snappedY);
         addBlock(flightBlock);
-      } else {
+      } else if (blockType === 2) {
         // Create a hotel block
         const hotelBlock = createHotelBlock(snappedX, snappedY);
         addBlock(hotelBlock);
+      } else {
+        // Create an activity block
+        const activityBlock = createActivityBlock(snappedX, snappedY);
+        addBlock(activityBlock);
       }
     }
-  }, [stagePosition, stageScale, addBlock, blocks.length, createFlightBlock, createHotelBlock]);
+  }, [stagePosition, stageScale, addBlock, blocks.length, createFlightBlock, createHotelBlock, createActivityBlock]);
 
 
 
@@ -332,6 +367,15 @@ export function Canvas() {
                 <HotelBlock
                   key={block.id}
                   block={block as HotelBlockType}
+                  onDragStart={handleBlockDragStart}
+                  onDragEnd={handleBlockDragEnd}
+                />
+              );
+            } else if ('type' in block && block.type === 'activity') {
+              return (
+                <ActivityBlock
+                  key={block.id}
+                  block={block as ActivityBlockType}
                   onDragStart={handleBlockDragStart}
                   onDragEnd={handleBlockDragEnd}
                 />
