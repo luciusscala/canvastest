@@ -234,11 +234,11 @@ export function Canvas() {
     setIsPanning(false);
   }, []);
 
-  // Handle wheel zoom - much less sensitive
+  // Handle wheel zoom - default sensitivity
   const handleWheel = useCallback((e: any) => {
     e.evt.preventDefault();
 
-    const scaleBy = 1.02; // Further reduced for much less sensitivity
+    const scaleBy = 1.1; // Default Konva sensitivity
     const stage = stageRef.current;
     const oldScale = stage.scaleX();
     const pointer = stage.getPointerPosition();
@@ -248,9 +248,7 @@ export function Canvas() {
       y: (pointer.y - stage.y()) / oldScale,
     };
 
-    // Apply sensitivity reduction
-    const sensitivity = 0.5; // More sensitive zoom
-    const deltaY = e.evt.deltaY * sensitivity;
+    const deltaY = e.evt.deltaY;
     const scaleFactor = deltaY > 0 ? scaleBy : 1 / scaleBy;
     
     const newScale = oldScale * scaleFactor;
