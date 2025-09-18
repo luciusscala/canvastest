@@ -1,34 +1,41 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { Stage, Layer, Rect, Text, Line } from 'react-konva';
+import { Stage, Layer, Text, Line } from 'react-konva';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { DraggableBlock } from './DraggableBlock';
 
-// Simple grid with limited lines to prevent recursion
-function SimpleGrid() {
+// Efficient grid that covers the entire viewport
+function SimpleGrid({ stageWidth, stageHeight, spacing = 20 }: { stageWidth: number; stageHeight: number; spacing?: number }) {
   const lines = [];
-  const spacing = 50; // Larger spacing
-  const width = 1000;
-  const height = 1000;
+  
+  // Calculate grid bounds based on current viewport
+  const gridSize = Math.max(stageWidth, stageHeight) * 2; // 2x viewport for panning
+  const startX = -gridSize / 2;
+  const startY = -gridSize / 2;
+  const endX = gridSize / 2;
+  const endY = gridSize / 2;
 
-  // Only create a few lines to test
-  for (let i = 0; i <= width; i += spacing) {
+  // Vertical lines
+  for (let x = startX; x <= endX; x += spacing) {
     lines.push(
       <Line
-        key={`v-${i}`}
-        points={[i, 0, i, height]}
+        key={`v-${x}`}
+        points={[x, startY, x, endY]}
         stroke="#e2e8f0"
         strokeWidth={0.5}
+        listening={false} // Don't interfere with mouse events
       />
     );
   }
 
-  for (let i = 0; i <= height; i += spacing) {
+  // Horizontal lines
+  for (let y = startY; y <= endY; y += spacing) {
     lines.push(
       <Line
-        key={`h-${i}`}
-        points={[0, i, width, i]}
+        key={`h-${y}`}
+        points={[startX, y, endX, y]}
         stroke="#e2e8f0"
         strokeWidth={0.5}
+        listening={false} // Don't interfere with mouse events
       />
     );
   }
@@ -39,8 +46,22 @@ function SimpleGrid() {
 export function Canvas() {
   const stageRef = useRef<any>(null);
   const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
+  const [stageScale, setStageScale] = useState(1);
+  const [isPanning, setIsPanning] = useState(false);
+  const [isDraggingBlock, setIsDraggingBlock] = useState(false);
+  const [lastPointerPosition, setLastPointerPosition] = useState({ x: 0, y: 0 });
 
   const { blocks, addBlock } = useCanvasStore();
+
+  // Callback to communicate drag state to blocks
+  const handleBlockDragStart = useCallback(() => {
+    setIsDraggingBlock(true);
+  }, []);
+
+  const handleBlockDragEnd = useCallback(() => {
+    setIsDraggingBlock(false);
+  }, []);
 
   // Handle window resize
   useEffect(() => {
@@ -52,17 +73,93 @@ export function Canvas() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Handle stage drag (panning) - only when not dragging blocks
+  const handleStageDragStart = useCallback((e: any) => {
+    // Only start panning if we're not dragging a block
+    if (isDraggingBlock) return;
+    
+    setIsPanning(true);
+    setLastPointerPosition(stageRef.current.getPointerPosition());
+  }, [isDraggingBlock]);
+
+  const handleStageDragMove = useCallback((e: any) => {
+    if (!isPanning || isDraggingBlock) return;
+
+    const stage = stageRef.current;
+    const newPos = stage.getPointerPosition();
+    const deltaX = newPos.x - lastPointerPosition.x;
+    const deltaY = newPos.y - lastPointerPosition.y;
+
+    // Apply pan sensitivity reduction
+    const panSensitivity = 0.8; // Lower = less sensitive (0.5-1.0 range)
+    const adjustedDeltaX = deltaX * panSensitivity;
+    const adjustedDeltaY = deltaY * panSensitivity;
+
+    // Update stage position directly for smooth panning
+    stage.x(stage.x() + adjustedDeltaX);
+    stage.y(stage.y() + adjustedDeltaY);
+    
+    // Update state for consistency
+    setStagePosition({
+      x: stage.x(),
+      y: stage.y()
+    });
+
+    setLastPointerPosition(newPos);
+  }, [isPanning, isDraggingBlock, lastPointerPosition]);
+
+  const handleStageDragEnd = useCallback(() => {
+    setIsPanning(false);
+  }, []);
+
+  // Handle wheel zoom - much less sensitive
+  const handleWheel = useCallback((e: any) => {
+    e.evt.preventDefault();
+
+    const scaleBy = 1.02; // Further reduced for much less sensitivity
+    const stage = stageRef.current;
+    const oldScale = stage.scaleX();
+    const pointer = stage.getPointerPosition();
+
+    const mousePointTo = {
+      x: (pointer.x - stage.x()) / oldScale,
+      y: (pointer.y - stage.y()) / oldScale,
+    };
+
+    // Apply much more sensitivity reduction
+    const sensitivity = 0.15; // Much lower = much less sensitive
+    const deltaY = e.evt.deltaY * sensitivity;
+    const scaleFactor = deltaY > 0 ? scaleBy : 1 / scaleBy;
+    
+    const newScale = oldScale * scaleFactor;
+    const clampedScale = Math.max(0.1, Math.min(3, newScale));
+
+    setStageScale(clampedScale);
+    setStagePosition({
+      x: pointer.x - mousePointTo.x * clampedScale,
+      y: pointer.y - mousePointTo.y * clampedScale,
+    });
+  }, []);
+
   // Handle double click to add blocks
   const handleStageClick = useCallback((e: any) => {
     if (e.evt.detail === 2) { // Double click
       const stage = stageRef.current;
       const pointer = stage.getPointerPosition();
       
+      // Convert stage coordinates to world coordinates
+      const x = (pointer.x - stagePosition.x) / stageScale;
+      const y = (pointer.y - stagePosition.y) / stageScale;
+      
+      // Snap to grid
+      const snappedX = Math.round(x / 20) * 20;
+      const snappedY = Math.round(y / 20) * 20;
+
       // Create a new block
       const newBlock = {
         id: `block-${Date.now()}`,
-        x: pointer.x - 60,
-        y: pointer.y - 30,
+        x: snappedX,
+        y: snappedY,
         width: 120,
         height: 60,
         title: `Block ${blocks.length + 1}`,
@@ -71,7 +168,7 @@ export function Canvas() {
 
       addBlock(newBlock);
     }
-  }, [addBlock, blocks.length]);
+  }, [stagePosition, stageScale, addBlock, blocks.length]);
 
   return (
     <div className="w-full h-screen bg-gradient-to-br from-slate-50 to-slate-100 relative">
@@ -89,24 +186,40 @@ export function Canvas() {
         ref={stageRef}
         width={stageSize.width}
         height={stageSize.height}
+        scaleX={stageScale}
+        scaleY={stageScale}
+        x={stagePosition.x}
+        y={stagePosition.y}
+        draggable={!isDraggingBlock}
+        onDragStart={handleStageDragStart}
+        onDragMove={handleStageDragMove}
+        onDragEnd={handleStageDragEnd}
+        onWheel={handleWheel}
         onClick={handleStageClick}
+        className={isDraggingBlock ? "cursor-default" : "cursor-grab active:cursor-grabbing"}
       >
         <Layer>
-          {/* Simple grid */}
-          <SimpleGrid />
+          {/* Grid background */}
+          <SimpleGrid stageWidth={stageSize.width} stageHeight={stageSize.height} />
           
-          {/* Simple test text */}
+          {/* Instructions text */}
           <Text
             x={20}
             y={20}
-            text="Double-click to add blocks"
-            fontSize={16}
-            fill="black"
+            text="Double-click to add blocks • Drag to pan • Scroll to zoom"
+            fontSize={14}
+            fill="#64748b"
+            listening={false}
           />
           
           {/* Render draggable blocks */}
           {blocks.map((block) => (
-            <DraggableBlock key={block.id} block={block} />
+            <DraggableBlock 
+              key={block.id} 
+              block={block}
+              onDragStart={handleBlockDragStart}
+              onDragEnd={handleBlockDragEnd}
+            />
           ))}
         </Layer>
       </Stage>
