@@ -1,75 +1,96 @@
-import { useDraggable } from '@dnd-kit/core';
-import { useState } from 'react';
-import type { TravelBlock } from '../types/index';
-import { FlightBlock } from './blocks/FlightBlock';
-import { RoundTripFlightBlock } from './blocks/RoundTripFlightBlock';
-import { HotelBlock } from './blocks/HotelBlock';
-import { ActivityBlock } from './blocks/ActivityBlock';
-import { TimelineBlock } from './TimelineBlock';
+import React, { useState, useRef } from 'react';
+import { Group, Rect, Text } from 'react-konva';
+import type { CanvasBlock } from '../types/index';
 import { useCanvasStore } from '../store/useCanvasStore';
 
 interface DraggableBlockProps {
-  block: TravelBlock;
+  block: CanvasBlock;
 }
 
 export function DraggableBlock({ block }: DraggableBlockProps) {
-  const { selectBlock } = useCanvasStore();
+  const { selectBlock, updateBlock } = useCanvasStore();
   const [isHovered, setIsHovered] = useState(false);
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    isDragging,
-  } = useDraggable({
-    id: block.id,
-  });
-
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    transition: isDragging ? 'none' : 'transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-  } : {
-    transition: 'transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-  };
+  const [isDragging, setIsDragging] = useState(false);
+  const groupRef = useRef<any>(null);
 
   const handleClick = () => {
     selectBlock(block.id);
   };
 
-  const renderBlock = () => {
-    switch (block.type) {
-      case 'flight':
-        return <FlightBlock block={block as any} />;
-      case 'roundtrip-flight':
-        return <RoundTripFlightBlock block={block as any} />;
-      case 'hotel':
-        return <HotelBlock block={block as any} />;
-      case 'activity':
-        return <ActivityBlock block={block as any} />;
-      default:
-        return null;
-    }
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = (e: any) => {
+    setIsDragging(false);
+    
+    // Snap to grid
+    const snappedX = Math.round(e.target.x() / 20) * 20;
+    const snappedY = Math.round(e.target.y() / 20) * 20;
+    
+    // Update block position
+    updateBlock(block.id, {
+      x: snappedX,
+      y: snappedY,
+    });
+    
+    // Reset position to snapped coordinates
+    e.target.x(snappedX);
+    e.target.y(snappedY);
+  };
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
+    <Group
+      ref={groupRef}
+      x={block.x}
+      y={block.y}
+      draggable
       onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      <TimelineBlock
-        block={block}
-        isSelected={false}
-        isHovered={isHovered}
-        isDragging={isDragging}
-      >
-        {renderBlock()}
-      </TimelineBlock>
-    </div>
+      {/* Block background */}
+      <Rect
+        width={block.width}
+        height={block.height}
+        fill={block.color || '#ffffff'}
+        stroke={isHovered ? '#60a5fa' : '#d1d5db'}
+        strokeWidth={2}
+        cornerRadius={8}
+        shadowColor="rgba(0, 0, 0, 0.1)"
+        shadowBlur={isHovered ? 10 : 5}
+        shadowOffset={{ x: 0, y: 2 }}
+        shadowOpacity={1}
+        scaleX={isDragging ? 1.05 : 1}
+        scaleY={isDragging ? 1.05 : 1}
+        opacity={isDragging ? 0.8 : 1}
+      />
+      
+      {/* Block text */}
+      <Text
+        x={12}
+        y={block.height / 2 - 8}
+        width={block.width - 24}
+        height={16}
+        text={block.title}
+        fontSize={14}
+        fontFamily="Inter, system-ui, sans-serif"
+        fill="#374151"
+        align="center"
+        verticalAlign="middle"
+        wrap="none"
+        ellipsis={true}
+      />
+    </Group>
   );
 }

@@ -1,183 +1,115 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { DndContext, type DragEndEvent, useDndMonitor } from '@dnd-kit/core';
+import { useRef, useState, useCallback, useEffect } from 'react';
+import { Stage, Layer, Rect, Text, Line } from 'react-konva';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { DraggableBlock } from './DraggableBlock';
-import { DotGrid } from './DotGrid';
-import { SnappingIndicator } from './SnappingIndicator';
-import { findNearbyConnectionPoints, calculateSnapPosition } from '../utils/blockConnections';
 
-interface CanvasProps {
-  children?: React.ReactNode;
+// Simple grid with limited lines to prevent recursion
+function SimpleGrid() {
+  const lines = [];
+  const spacing = 50; // Larger spacing
+  const width = 1000;
+  const height = 1000;
+
+  // Only create a few lines to test
+  for (let i = 0; i <= width; i += spacing) {
+    lines.push(
+      <Line
+        key={`v-${i}`}
+        points={[i, 0, i, height]}
+        stroke="#e2e8f0"
+        strokeWidth={0.5}
+      />
+    );
+  }
+
+  for (let i = 0; i <= height; i += spacing) {
+    lines.push(
+      <Line
+        key={`h-${i}`}
+        points={[0, i, width, i]}
+        stroke="#e2e8f0"
+        strokeWidth={0.5}
+      />
+    );
+  }
+
+  return lines;
 }
 
-// Inner component that uses useDndMonitor
-function CanvasContent({ children }: CanvasProps) {
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isDragActive, setIsDragActive] = useState(false);
-  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
-  const [snapPosition, setSnapPosition] = useState<{ x: number; y: number } | null>(null);
+export function Canvas() {
+  const stageRef = useRef<any>(null);
+  const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
-  const { blocks } = useCanvasStore();
+  const { blocks, addBlock } = useCanvasStore();
 
-  // Monitor drag state from @dnd-kit
-  useDndMonitor({
-    onDragStart: () => {
-      setIsDragActive(true);
-    },
-    onDragEnd: () => {
-      setIsDragActive(false);
-      setSnapPosition(null);
-    },
-  });
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setStageSize({ width: window.innerWidth, height: window.innerHeight });
+    };
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0 || isDragActive) return;
-    
-    // Only start panning if the target is the canvas itself, not a child element
-    if (e.target === e.currentTarget) {
-      setIsDragging(true);
-      setLastMousePos({ x: e.clientX, y: e.clientY });
-    }
-  }, [isDragActive]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || isDragActive) return;
-
-    const deltaX = e.clientX - lastMousePos.x;
-    const deltaY = e.clientY - lastMousePos.y;
-
-    setTransform(prev => ({
-      ...prev,
-      x: prev.x + deltaX,
-      y: prev.y + deltaY
-    }));
-
-    setLastMousePos({ x: e.clientX, y: e.clientY });
-  }, [isDragging, isDragActive, lastMousePos]);
-
-  const handleMouseUp = useCallback(() => {
-    if (!isDragActive) {
-      setIsDragging(false);
-    }
-  }, [isDragActive]);
-
-  const handleWheel = useCallback((e: WheelEvent) => {
-    e.preventDefault();
-    const zoomSpeed = 0.1;
-    const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
-
-    setTransform(prev => ({
-      ...prev,
-      scale: Math.max(0.5, Math.min(2, prev.scale + delta))
-    }));
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Add wheel event listener with proper options
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.addEventListener('wheel', handleWheel, { passive: false });
-      return () => {
-        canvas.removeEventListener('wheel', handleWheel);
-      };
-    }
-  }, [handleWheel]);
-
-  return (
-    <div
-      ref={canvasRef}
-      className="w-full h-screen overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 cursor-grab active:cursor-grabbing"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-    >
-      {/* Grid background */}
-      <DotGrid spacing={20} dotSize={1} />
+  // Handle double click to add blocks
+  const handleStageClick = useCallback((e: any) => {
+    if (e.evt.detail === 2) { // Double click
+      const stage = stageRef.current;
+      const pointer = stage.getPointerPosition();
       
-      <div
-        className="origin-top-left relative"
-        style={{
-          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
-          transition: isDragging ? 'none' : 'transform 0.1s ease-out'
-        }}
-      >
-        {children}
+      // Create a new block
+      const newBlock = {
+        id: `block-${Date.now()}`,
+        x: pointer.x - 60,
+        y: pointer.y - 30,
+        width: 120,
+        height: 60,
+        title: `Block ${blocks.length + 1}`,
+        color: `hsl(${(blocks.length * 137.5) % 360}, 70%, 80%)`,
+      };
 
-        {/* Render draggable blocks */}
-        {blocks.map((block) => (
-          <DraggableBlock key={block.id} block={block} />
-        ))}
-
-        {/* Snapping indicator */}
-        {snapPosition && (
-          <SnappingIndicator 
-            x={snapPosition.x} 
-            y={snapPosition.y} 
-            isVisible={isDragActive} 
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Main Canvas component that provides DndContext
-export function Canvas({ children }: CanvasProps) {
-  const { updateBlock, getBlock, blocks } = useCanvasStore();
-
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, delta } = event;
-    if (delta) {
-      const block = getBlock(active.id as string);
-      if (block) {
-        const newX = block.x + delta.x;
-        const newY = block.y + delta.y;
-        
-        // Create a temporary block with new position
-        const tempBlock = { ...block, x: newX, y: newY };
-        
-        // Find nearby connection points
-        const nearbyPoints = findNearbyConnectionPoints(tempBlock, blocks);
-        
-        if (nearbyPoints.length > 0) {
-          // Snap to the closest connection point
-          const closestPoint = nearbyPoints[0];
-          const snapPosition = calculateSnapPosition(
-            tempBlock,
-            closestPoint,
-            'start-to-end' // Default snap type
-          );
-          
-          // Use requestAnimationFrame for smoother updates
-          requestAnimationFrame(() => {
-            updateBlock(block.id, {
-              x: snapPosition.x,
-              y: snapPosition.y,
-            });
-          });
-        } else {
-          // Regular grid snapping to 20px grid
-          const snappedX = Math.round(newX / 20) * 20;
-          const snappedY = Math.round(newY / 20) * 20;
-
-          // Use requestAnimationFrame for smoother updates
-          requestAnimationFrame(() => {
-            updateBlock(block.id, {
-              x: snappedX,
-              y: snappedY,
-            });
-          });
-        }
-      }
+      addBlock(newBlock);
     }
-  }, [getBlock, updateBlock, blocks]);
+  }, [addBlock, blocks.length]);
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
-      <CanvasContent>{children}</CanvasContent>
-    </DndContext>
+    <div className="w-full h-screen bg-gradient-to-br from-slate-50 to-slate-100 relative">
+      {/* Instructions */}
+      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg border border-gray-200 z-10">
+        <p className="text-sm text-gray-600">
+          <strong>Canvas Controls:</strong><br />
+          • Double-click to add blocks<br />
+          • Drag to pan, scroll to zoom<br />
+          • Drag blocks to move them
+        </p>
+      </div>
+
+      <Stage
+        ref={stageRef}
+        width={stageSize.width}
+        height={stageSize.height}
+        onClick={handleStageClick}
+      >
+        <Layer>
+          {/* Simple grid */}
+          <SimpleGrid />
+          
+          {/* Simple test text */}
+          <Text
+            x={20}
+            y={20}
+            text="Double-click to add blocks"
+            fontSize={16}
+            fill="black"
+          />
+          
+          {/* Render draggable blocks */}
+          {blocks.map((block) => (
+            <DraggableBlock key={block.id} block={block} />
+          ))}
+        </Layer>
+      </Stage>
+    </div>
   );
 }
