@@ -34,6 +34,8 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const groupRef = useRef<any>(null);
 
+  const { tripTimeline } = useCanvasStore();
+  
   const { snappingResult, handleDragMove, handleDragEnd: handleSnapDragEnd } = useSnapping(
     block,
     blocks,
@@ -44,7 +46,8 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
           y: snapResult.snapY,
         });
       }
-    }
+    },
+    tripTimeline
   );
 
   const handleClick = (e: KonvaEvent) => {
@@ -187,7 +190,7 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
               x={keyX + 18}
               y={-48}
               text={`${event.type.toUpperCase()} - ${event.date}`}
-              fontSize={10}
+              fontSize={14}
               fontFamily="Inter, system-ui, sans-serif"
               fill="#374151"
               listening={false}
@@ -198,7 +201,7 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
               x={keyX + 18}
               y={-36}
               text={event.hotelName}
-              fontSize={8}
+              fontSize={12}
               fontFamily="Inter, system-ui, sans-serif"
               fill="#6b7280"
               listening={false}

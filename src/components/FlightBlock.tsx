@@ -179,7 +179,7 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
               x={keyX + 18}
               y={-48}
               text={`${segment.flightNumber} (${segment.departure}→${segment.arrival}) - ${segment.duration}h`}
-              fontSize={10}
+              fontSize={14}
               fontFamily="Inter, system-ui, sans-serif"
               fill="#374151"
               listening={false}
@@ -190,7 +190,7 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
               x={keyX + 18}
               y={-36}
               text={segment.type.toUpperCase()}
-              fontSize={8}
+              fontSize={12}
               fontFamily="Inter, system-ui, sans-serif"
               fill="#6b7280"
               listening={false}

@@ -1,12 +1,12 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { Stage, Layer, Text, Line } from 'react-konva';
+import { Stage, Layer, Text, Line, Group, Rect } from 'react-konva';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { DraggableBlock } from './DraggableBlock';
 import { FlightBlock } from './FlightBlock';
 import { HotelBlock } from './HotelBlock';
 import { ActivityBlock } from './ActivityBlock';
-import { SnappingIndicator } from './SnappingIndicator';
 import type { FlightBlock as FlightBlockType, FlightSegment, HotelBlock as HotelBlockType, HotelEvent, ActivityBlock as ActivityBlockType } from '../types/index';
+import { createDateRange, calculateHoursFromTripStart, calculateBlockPosition } from '../utils/timeUtils';
 
 // Efficient grid that covers the entire viewport
 function SimpleGrid({ stageWidth, stageHeight, spacing = 20 }: { stageWidth: number; stageHeight: number; spacing?: number }) {
@@ -57,7 +57,17 @@ export function Canvas() {
   const [isDraggingBlock, setIsDraggingBlock] = useState(false);
   const [lastPointerPosition, setLastPointerPosition] = useState({ x: 0, y: 0 });
 
-  const { blocks, addBlock } = useCanvasStore();
+  const { blocks, addBlock, tripTimeline, initializeTripTimeline } = useCanvasStore();
+
+  // Initialize trip timeline on component mount
+  useEffect(() => {
+    if (!tripTimeline) {
+      // Create a 7-day trip from Dec 15-22, 2024
+      const startDate = new Date('2024-12-15T00:00:00');
+      const endDate = new Date('2024-12-22T23:59:59');
+      initializeTripTimeline(startDate, endDate, 5); // 5 pixels per hour for smaller units
+    }
+  }, [tripTimeline, initializeTripTimeline]);
 
   // Callback to communicate drag state to blocks
   const handleBlockDragStart = useCallback(() => {
@@ -68,98 +78,166 @@ export function Canvas() {
     setIsDraggingBlock(false);
   }, []);
 
-  // Create a sample flight block
-  const createFlightBlock = useCallback((x: number, y: number): FlightBlockType => {
+  // Create a sample flight block with date-based positioning
+  const createFlightBlock = useCallback((_x: number, y: number): FlightBlockType => {
+    if (!tripTimeline) {
+      throw new Error('Trip timeline not initialized');
+    }
+
+    // Flight dates: Dec 15 departure, Dec 21 return
+    const departureDate = new Date('2024-12-15T08:00:00');
+    const returnDate = new Date('2024-12-21T18:00:00');
+    
+    const startHour = calculateHoursFromTripStart(departureDate, tripTimeline.startDate);
+    const endHour = calculateHoursFromTripStart(returnDate, tripTimeline.startDate);
+    const durationHours = endHour - startHour;
+
     const segments: FlightSegment[] = [
       {
         id: `segment-${Date.now()}-1`,
-        startTime: 0, // Day 0, 8:00 AM
+        startTime: 0, // Relative to flight start (0 hours into flight)
         duration: 2.5, // 2.5 hours
         type: 'outbound',
         flightNumber: 'AA123',
         departure: 'JFK',
         arrival: 'LAX',
-        label: 'AA123'
+        label: 'AA123',
+        startHour: 0, // Relative to flight start
+        durationHours: 2.5,
+        dateRange: createDateRange(departureDate, new Date(departureDate.getTime() + 2.5 * 60 * 60 * 1000))
       },
       {
         id: `segment-${Date.now()}-2`,
-        startTime: 24, // Day 1, 8:00 AM
+        startTime: 2.5, // 2.5 hours into flight
         duration: 1.5, // 1.5 hours
         type: 'connecting',
         flightNumber: 'AA456',
         departure: 'LAX',
         arrival: 'SFO',
-        label: 'AA456'
+        label: 'AA456',
+        startHour: 2.5, // Relative to flight start
+        durationHours: 1.5,
+        dateRange: createDateRange(
+          new Date(departureDate.getTime() + 2.5 * 60 * 60 * 1000),
+          new Date(departureDate.getTime() + 4 * 60 * 60 * 1000)
+        )
       },
       {
         id: `segment-${Date.now()}-3`,
-        startTime: 162.5, // Day 6, 6:30 PM (near end of 7-day period)
+        startTime: durationHours - 5.5, // 5.5 hours before flight end
         duration: 5.5, // 5.5 hours
         type: 'return',
         flightNumber: 'AA789',
         departure: 'SFO',
         arrival: 'JFK',
-        label: 'AA789'
+        label: 'AA789',
+        startHour: durationHours - 5.5, // Relative to flight start
+        durationHours: 5.5,
+        dateRange: createDateRange(
+          new Date(returnDate.getTime() - 5.5 * 60 * 60 * 1000),
+          returnDate
+        )
       }
     ];
+
+    // Calculate position based on time
+    const position = calculateBlockPosition(startHour, durationHours, tripTimeline.scale);
 
     return {
       id: `flight-${Date.now()}`,
       type: 'flight',
-      x: x,
+      x: position.x,
       y: y,
-      width: 800, // Much wider
-      height: 150, // Much taller
-      title: 'Flight Block',
-      totalHours: 168, // 7 days = 168 hours
+      width: position.width,
+      height: 150,
+      title: 'Round Trip Flight',
+      totalHours: durationHours,
       segments,
-      contextBarHeight: 24, // Taller context bar
-      segmentHeight: 80, // Much taller segments
+      contextBarHeight: 24,
+      segmentHeight: 80,
       departureAirport: 'JFK',
       arrivalAirport: 'JFK',
-      color: '#f3f4f6'
+      color: '#f3f4f6',
+      // New date-based properties
+      startHour,
+      durationHours,
+      dateRange: createDateRange(departureDate, returnDate)
     };
-  }, []);
+  }, [tripTimeline]);
 
-  // Create a sample hotel block
-  const createHotelBlock = useCallback((x: number, y: number): HotelBlockType => {
+  // Create a sample hotel block with date-based positioning
+  const createHotelBlock = useCallback((_x: number, y: number): HotelBlockType => {
+    if (!tripTimeline) {
+      throw new Error('Trip timeline not initialized');
+    }
+
+    // Hotel stay: Dec 16-19 (3 days)
+    const checkinDate = new Date('2024-12-16T15:00:00');
+    const checkoutDate = new Date('2024-12-19T11:00:00');
+    
+    const startHour = calculateHoursFromTripStart(checkinDate, tripTimeline.startDate);
+    const endHour = calculateHoursFromTripStart(checkoutDate, tripTimeline.startDate);
+    const durationHours = endHour - startHour;
+
     const events: HotelEvent[] = [
       {
         id: `event-${Date.now()}-1`,
         type: 'checkin',
-        date: 'Dec 15',
-        hotelName: 'Grand Hotel'
+        date: 'Dec 16',
+        hotelName: 'Grand Hotel',
+        startHour: startHour,
+        dateRange: createDateRange(checkinDate, checkinDate)
       },
       {
         id: `event-${Date.now()}-2`,
         type: 'checkout',
-        date: 'Dec 18',
-        hotelName: 'Grand Hotel'
+        date: 'Dec 19',
+        hotelName: 'Grand Hotel',
+        startHour: endHour,
+        dateRange: createDateRange(checkoutDate, checkoutDate)
       }
     ];
+
+    // Calculate position based on time
+    const position = calculateBlockPosition(startHour, durationHours, tripTimeline.scale);
 
     return {
       id: `hotel-${Date.now()}`,
       type: 'hotel',
-      x: x,
+      x: position.x,
       y: y,
-      width: 600, // Wider for hotel stays
+      width: position.width,
       height: 100,
-      title: 'Hotel Block',
-      totalDays: 3, // 3-day stay
+      title: 'Grand Hotel',
+      totalDays: 3, // 3-day stay (for backward compatibility)
       events,
       contextBarHeight: 20,
       eventHeight: 60,
       hotelName: 'Grand Hotel',
       location: 'San Francisco',
-      color: '#f3f4f6'
+      color: '#f3f4f6',
+      // New date-based properties
+      startHour,
+      durationHours,
+      dateRange: createDateRange(checkinDate, checkoutDate)
     };
-  }, []);
+  }, [tripTimeline]);
 
-  // Create a sample activity block
-  const createActivityBlock = useCallback((x: number, y: number): ActivityBlockType => {
+  // Create a sample activity block with date-based positioning
+  const createActivityBlock = useCallback((_x: number, y: number): ActivityBlockType => {
+    if (!tripTimeline) {
+      throw new Error('Trip timeline not initialized');
+    }
+
     const duration = Math.random() * 4 + 1; // 1-5 hours
-    const width = duration * 60; // Scale width based on duration (60px per hour)
+    const durationHours = Math.round(duration * 10) / 10;
+    
+    // Random activity time during the trip (Dec 17-18)
+    const activityDate = new Date('2024-12-17T10:00:00');
+    const randomHourOffset = Math.random() * 24; // Random hour within the day
+    activityDate.setHours(activityDate.getHours() + randomHourOffset);
+    
+    const startHour = calculateHoursFromTripStart(activityDate, tripTimeline.startDate);
     
     const activities = [
       { name: 'Museum Visit', type: 'sightseeing', color: '#8b5cf6' },
@@ -171,20 +249,27 @@ export function Canvas() {
     
     const activity = activities[Math.floor(Math.random() * activities.length)];
 
+    // Calculate position based on time
+    const position = calculateBlockPosition(startHour, durationHours, tripTimeline.scale);
+
     return {
       id: `activity-${Date.now()}`,
       type: 'activity',
-      x: x,
+      x: position.x,
       y: y,
-      width: width,
-      height: 60, // Fixed height
+      width: position.width,
+      height: 60,
       title: activity.name,
-      duration: Math.round(duration * 10) / 10, // Round to 1 decimal
+      duration: durationHours, // For backward compatibility
       activityType: activity.type,
       location: 'San Francisco',
-      color: activity.color
+      color: activity.color,
+      // New date-based properties
+      startHour,
+      durationHours,
+      dateRange: createDateRange(activityDate, new Date(activityDate.getTime() + durationHours * 60 * 60 * 1000))
     };
-  }, []);
+  }, [tripTimeline]);
 
   // Handle window resize
   useEffect(() => {
@@ -349,6 +434,7 @@ export function Canvas() {
             fill="#64748b"
             listening={false}
           />
+          
           
           {/* Render blocks */}
           {blocks.map((block) => {

@@ -27,6 +27,8 @@ export function ActivityBlock({ block, onDragStart, onDragEnd }: ActivityBlockPr
   const [isDragging, setIsDragging] = useState(false);
   const groupRef = useRef<any>(null);
 
+  const { tripTimeline } = useCanvasStore();
+  
   const { snappingResult, handleDragMove, handleDragEnd: handleSnapDragEnd } = useSnapping(
     block,
     blocks,
@@ -37,7 +39,8 @@ export function ActivityBlock({ block, onDragStart, onDragEnd }: ActivityBlockPr
           y: snapResult.snapY,
         });
       }
-    }
+    },
+    tripTimeline
   );
 
   const handleClick = (e: KonvaEvent) => {

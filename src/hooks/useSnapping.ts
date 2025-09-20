@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { findBestSnapTarget } from '../utils/snapping';
-import type { CanvasBlock, FlightBlock, HotelBlock, ActivityBlock } from '../types/index';
+import { findBestSnapTarget, findBestSnapTargetWithDates } from '../utils/snapping';
+import type { CanvasBlock, FlightBlock, HotelBlock, ActivityBlock, TripTimeline } from '../types/index';
 
 type SnappingResult = {
   shouldSnap: boolean;
@@ -13,7 +13,8 @@ type SnappingResult = {
 export function useSnapping(
   block: CanvasBlock | FlightBlock | HotelBlock | ActivityBlock,
   allBlocks: (CanvasBlock | FlightBlock | HotelBlock | ActivityBlock)[],
-  onDragEnd: (snapResult: SnappingResult | null) => void
+  onDragEnd: (snapResult: SnappingResult | null) => void,
+  tripTimeline?: TripTimeline | null
 ) {
   const [snappingResult, setSnappingResult] = useState<SnappingResult | null>(null);
 
@@ -21,10 +22,23 @@ export function useSnapping(
     const newX = e.target.x();
     const newY = e.target.y();
     
-    // Check for snapping opportunities
-    const snapResult = findBestSnapTarget(block, allBlocks, newX, newY, 50);
-    setSnappingResult(snapResult);
-  }, [block, allBlocks]);
+    // Use date-based snapping if trip timeline is available
+    if (tripTimeline) {
+      const enhancedSnapResult = findBestSnapTargetWithDates(
+        block, 
+        allBlocks, 
+        newX, 
+        newY, 
+        tripTimeline, 
+        50
+      );
+      setSnappingResult(enhancedSnapResult);
+    } else {
+      // Fallback to basic snapping
+      const snapResult = findBestSnapTarget(block, allBlocks, newX, newY, 50);
+      setSnappingResult(snapResult);
+    }
+  }, [block, allBlocks, tripTimeline]);
 
   const handleDragEnd = useCallback((e: any) => {
     const finalX = e.target.x();

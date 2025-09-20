@@ -1,4 +1,5 @@
-import type { CanvasBlock, FlightBlock, HotelBlock, ActivityBlock } from '../types/index';
+import type { CanvasBlock, FlightBlock, HotelBlock, ActivityBlock, DateSnappingResult, TripTimeline } from '../types/index';
+import { findBestDateSnapTarget, validateFreePlacement } from './dateSnapping';
 
 export interface SnappingResult {
   shouldSnap: boolean;
@@ -6,6 +7,26 @@ export interface SnappingResult {
   snapY: number;
   parentId?: string;
   snapType: 'none' | 'flight' | 'hotel' | 'activity';
+}
+
+// Enhanced snapping with date validation
+export interface EnhancedSnappingResult extends SnappingResult {
+  validation?: {
+    isValid: boolean;
+    conflicts: Array<{
+      type: 'overlap' | 'logical' | 'resource';
+      message: string;
+      conflictingBlockId: string;
+      severity: 'error' | 'warning' | 'info';
+    }>;
+    canSnap: boolean;
+    suggestedPosition?: {
+      startHour: number;
+      durationHours: number;
+      x: number;
+      width: number;
+    };
+  };
 }
 
 // Check if a block can be snapped into a parent context
@@ -160,4 +181,65 @@ export function findBestSnapTarget(
   }
 
   return bestSnap;
+}
+
+// Enhanced findBestSnapTarget with date validation
+export function findBestSnapTargetWithDates(
+  draggedBlock: CanvasBlock | FlightBlock | HotelBlock | ActivityBlock,
+  allBlocks: (CanvasBlock | FlightBlock | HotelBlock | ActivityBlock)[],
+  draggedX: number,
+  draggedY: number,
+  tripTimeline: TripTimeline,
+  snapThreshold: number = 50
+): EnhancedSnappingResult {
+  // First try to find a parent to snap to
+  const snapResult = findBestDateSnapTarget(
+    draggedBlock,
+    allBlocks,
+    draggedX,
+    draggedY,
+    tripTimeline,
+    snapThreshold
+  );
+  
+  if (snapResult.shouldSnap) {
+    return {
+      shouldSnap: true,
+      snapX: snapResult.snapX,
+      snapY: snapResult.snapY,
+      parentId: snapResult.parentId,
+      snapType: snapResult.snapType,
+      validation: snapResult.validation
+    };
+  }
+  
+  // If no parent snapping, validate free placement
+  const freePlacementResult = validateFreePlacement(
+    draggedBlock,
+    draggedX,
+    draggedY,
+    allBlocks,
+    tripTimeline
+  );
+  
+  return {
+    shouldSnap: false,
+    snapX: draggedX,
+    snapY: draggedY,
+    snapType: 'none',
+    validation: freePlacementResult.validation
+  };
+}
+
+// Convert DateSnappingResult to SnappingResult for backward compatibility
+export function convertToLegacySnappingResult(
+  dateResult: DateSnappingResult
+): SnappingResult {
+  return {
+    shouldSnap: dateResult.shouldSnap,
+    snapX: dateResult.snapX,
+    snapY: dateResult.snapY,
+    parentId: dateResult.parentId,
+    snapType: dateResult.snapType
+  };
 }
