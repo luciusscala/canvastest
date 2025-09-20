@@ -142,9 +142,9 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
       {/* Color-coded key above the block */}
       <Rect
         x={0}
-        y={-60}
+        y={-80}
         width={block.width}
-        height={50}
+        height={70}
         fill="#ffffff"
         stroke="#e5e7eb"
         strokeWidth={1}
@@ -156,6 +156,39 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
         listening={false}
       />
       
+      {/* Flight title and dates */}
+      <Text
+        x={10}
+        y={-70}
+        text={`${block.title} - ${block.departureAirport} → ${block.arrivalAirport}`}
+        fontSize={16}
+        fontFamily="Inter, system-ui, sans-serif"
+        fill="#1f2937"
+        fontStyle="bold"
+        listening={false}
+      />
+      
+      {/* Flight dates */}
+      {block.dateRange && (
+        <Text
+          x={10}
+          y={-55}
+          text={`${block.dateRange.start.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric',
+            year: 'numeric'
+          })} - ${block.dateRange.end.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric',
+            year: 'numeric'
+          })}`}
+          fontSize={14}
+          fontFamily="Inter, system-ui, sans-serif"
+          fill="#6b7280"
+          listening={false}
+        />
+      )}
+      
       {/* Flight segments key */}
       {block.segments.map((segment, index) => {
         const keyX = 10 + (index * 200); // Space segments horizontally
@@ -166,7 +199,7 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
             {/* Color indicator */}
             <Rect
               x={keyX}
-              y={-50}
+              y={-30}
               width={12}
               height={12}
               fill={SEGMENT_COLORS[segment.type]}
@@ -177,22 +210,41 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
             {/* Flight info */}
             <Text
               x={keyX + 18}
-              y={-48}
+              y={-28}
               text={`${segment.flightNumber} (${segment.departure}→${segment.arrival}) - ${segment.duration}h`}
-              fontSize={14}
+              fontSize={12}
               fontFamily="Inter, system-ui, sans-serif"
               fill="#374151"
               listening={false}
             />
             
+            {/* Date info */}
+            {segment.dateRange && (
+              <Text
+                x={keyX + 18}
+                y={-16}
+                text={`${segment.dateRange.start.toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric'
+                })} - ${segment.dateRange.end.toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric'
+                })}`}
+                fontSize={10}
+                fontFamily="Inter, system-ui, sans-serif"
+                fill="#6b7280"
+                listening={false}
+              />
+            )}
+            
             {/* Type label */}
             <Text
               x={keyX + 18}
-              y={-36}
+              y={-4}
               text={segment.type.toUpperCase()}
-              fontSize={12}
+              fontSize={8}
               fontFamily="Inter, system-ui, sans-serif"
-              fill="#6b7280"
+              fill="#9ca3af"
               listening={false}
             />
           </Group>

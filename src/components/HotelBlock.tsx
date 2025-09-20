@@ -3,7 +3,6 @@ import { Group, Rect, Text } from 'react-konva';
 import type { HotelBlock } from '../types/index';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { useSnapping } from '../hooks/useSnapping';
-import { SnappingIndicator } from './SnappingIndicator';
 
 type KonvaEvent = {
   target: {
@@ -154,9 +153,9 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
       {/* Color-coded key above the block */}
       <Rect
         x={0}
-        y={-60}
+        y={-80}
         width={block.width}
-        height={50}
+        height={70}
         fill="#ffffff"
         stroke="#e5e7eb"
         strokeWidth={1}
@@ -168,6 +167,39 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
         listening={false}
       />
       
+      {/* Hotel title and dates */}
+      <Text
+        x={10}
+        y={-70}
+        text={`${block.hotelName} - ${block.location}`}
+        fontSize={16}
+        fontFamily="Inter, system-ui, sans-serif"
+        fill="#1f2937"
+        fontStyle="bold"
+        listening={false}
+      />
+      
+      {/* Hotel dates */}
+      {block.dateRange && (
+        <Text
+          x={10}
+          y={-55}
+          text={`${block.dateRange.start.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric',
+            year: 'numeric'
+          })} - ${block.dateRange.end.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric',
+            year: 'numeric'
+          })}`}
+          fontSize={14}
+          fontFamily="Inter, system-ui, sans-serif"
+          fill="#6b7280"
+          listening={false}
+        />
+      )}
+      
       {/* Hotel events key */}
       {block.events.map((event, index) => {
         const keyX = 10 + (index * 200); // Space events horizontally
@@ -177,7 +209,7 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
             {/* Color indicator */}
             <Rect
               x={keyX}
-              y={-50}
+              y={-30}
               width={12}
               height={12}
               fill={HOTEL_COLORS[event.type]}
@@ -188,9 +220,9 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
             {/* Event info */}
             <Text
               x={keyX + 18}
-              y={-48}
+              y={-28}
               text={`${event.type.toUpperCase()} - ${event.date}`}
-              fontSize={14}
+              fontSize={12}
               fontFamily="Inter, system-ui, sans-serif"
               fill="#374151"
               listening={false}
@@ -199,9 +231,9 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
             {/* Hotel name */}
             <Text
               x={keyX + 18}
-              y={-36}
+              y={-16}
               text={event.hotelName}
-              fontSize={12}
+              fontSize={10}
               fontFamily="Inter, system-ui, sans-serif"
               fill="#6b7280"
               listening={false}
@@ -210,14 +242,6 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
         );
       })}
       
-      {/* Snapping indicator */}
-      {snappingResult && (
-        <SnappingIndicator
-          snappingResult={snappingResult}
-          blockWidth={block.width}
-          blockHeight={block.height}
-        />
-      )}
     </Group>
   );
 }

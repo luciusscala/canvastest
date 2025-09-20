@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { findBestSnapTarget, findBestSnapTargetWithDates } from '../utils/snapping';
+import { findSnapTarget, validatePlacement } from '../utils/simpleSnapping';
 import type { CanvasBlock, FlightBlock, HotelBlock, ActivityBlock, TripTimeline } from '../types/index';
 
 type SnappingResult = {
@@ -22,21 +22,12 @@ export function useSnapping(
     const newX = e.target.x();
     const newY = e.target.y();
     
-    // Use date-based snapping if trip timeline is available
+    // Only try to snap if we have a trip timeline
     if (tripTimeline) {
-      const enhancedSnapResult = findBestSnapTargetWithDates(
-        block, 
-        allBlocks, 
-        newX, 
-        newY, 
-        tripTimeline, 
-        50
-      );
-      setSnappingResult(enhancedSnapResult);
-    } else {
-      // Fallback to basic snapping
-      const snapResult = findBestSnapTarget(block, allBlocks, newX, newY, 50);
+      const snapResult = findSnapTarget(block, allBlocks, newX, newY, tripTimeline);
       setSnappingResult(snapResult);
+    } else {
+      setSnappingResult(null);
     }
   }, [block, allBlocks, tripTimeline]);
 
@@ -51,8 +42,23 @@ export function useSnapping(
     if (snappingResult?.shouldSnap) {
       snappedX = snappingResult.snapX;
       snappedY = snappingResult.snapY;
+    } else if (tripTimeline) {
+      // Validate placement for blocks with time data
+      const validation = validatePlacement(block, finalX, finalY, allBlocks, tripTimeline);
+      
+      if (!validation.isValid) {
+        // Revert to correct position for time-based blocks
+        if (block.startHour !== undefined && block.durationHours !== undefined) {
+          const correctPosition = {
+            x: block.startHour * tripTimeline.scale,
+            y: finalY
+          };
+          snappedX = correctPosition.x;
+          snappedY = correctPosition.y;
+        }
+      }
     } else {
-      // Snap to grid
+      // Snap to grid for blocks without time data
       snappedX = Math.round(finalX / 20) * 20;
       snappedY = Math.round(finalY / 20) * 20;
     }
@@ -66,7 +72,7 @@ export function useSnapping(
     
     // Clear snapping result
     setSnappingResult(null);
-  }, [snappingResult, onDragEnd]);
+  }, [snappingResult, onDragEnd, block, allBlocks, tripTimeline]);
 
   return {
     snappingResult,

@@ -3,7 +3,6 @@ import { Group, Rect, Text } from 'react-konva';
 import type { ActivityBlock } from '../types/index';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { useSnapping } from '../hooks/useSnapping';
-import { SnappingIndicator } from './SnappingIndicator';
 
 type KonvaEvent = {
   target: {
@@ -113,6 +112,26 @@ export function ActivityBlock({ block, onDragStart, onDragEnd }: ActivityBlockPr
         listening={false}
       />
       
+      {/* Activity date */}
+      {block.dateRange && (
+        <Text
+          x={8}
+          y={24}
+          text={block.dateRange.start.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+          })}
+          fontSize={10}
+          fontFamily="Inter, system-ui, sans-serif"
+          fill="#6b7280"
+          width={block.width - 16}
+          align="left"
+          listening={false}
+        />
+      )}
+      
       {/* Duration */}
       <Text
         x={8}
@@ -126,14 +145,6 @@ export function ActivityBlock({ block, onDragStart, onDragEnd }: ActivityBlockPr
         listening={false}
       />
       
-      {/* Snapping indicator */}
-      {snappingResult && (
-        <SnappingIndicator
-          snappingResult={snappingResult}
-          blockWidth={block.width}
-          blockHeight={block.height}
-        />
-      )}
     </Group>
   );
 }
