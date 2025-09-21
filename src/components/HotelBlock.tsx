@@ -3,6 +3,7 @@ import { Group, Rect, Text } from 'react-konva';
 import type { HotelBlock } from '../types/index';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { useSnapping } from '../hooks/useSnapping';
+import { FloatingLabel } from './FloatingLabel';
 
 type KonvaEvent = {
   target: {
@@ -27,7 +28,7 @@ const HOTEL_COLORS = {
 };
 
 export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
-  const { selectBlock, updateBlock, blocks } = useCanvasStore();
+  const { selectBlock, updateBlock, blocks, getRelationshipsForBlock } = useCanvasStore();
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -39,15 +40,24 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
     block,
     blocks,
     (snapResult) => {
-      if (snapResult?.shouldSnap) {
-        updateBlock(block.id, {
-          x: snapResult.snapX,
-          y: snapResult.snapY,
-        });
-      }
+      // Always update the block position, whether snapping or not
+      const finalX = snapResult?.snapX ?? block.x;
+      const finalY = snapResult?.snapY ?? block.y;
+      
+      updateBlock(block.id, {
+        x: finalX,
+        y: finalY,
+      });
     },
     tripTimeline
   );
+
+  // Get relationship for this block (optimized from store)
+  const currentRelationship = getRelationshipsForBlock(block.id);
+  const isPartOfRelationship = currentRelationship !== null;
+  
+  // Only show label if this block is the PARENT in the relationship (not a child)
+  const shouldShowLabel = currentRelationship && currentRelationship.parent.id === block.id;
 
   const handleClick = (e: KonvaEvent) => {
     e.cancelBubble = true; // Prevent event bubbling to stage
@@ -66,6 +76,14 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
     
     // Use the simplified snapping logic
     handleSnapDragEnd(e);
+    
+    // Always update the store with the final position to ensure relationships are recalculated
+    const finalX = e.target.x();
+    const finalY = e.target.y();
+    updateBlock(block.id, {
+      x: finalX,
+      y: finalY,
+    });
   };
 
   const handleMouseEnter = () => {
@@ -105,6 +123,15 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
+      {/* Show floating label only if this hotel is the PARENT in the relationship */}
+      {shouldShowLabel && (
+        <FloatingLabel
+          relationship={currentRelationship}
+          x={0}
+          y={0}
+          width={block.width}
+        />
+      )}
       {/* Context Bar - horizontal rectangle */}
       <Rect
         x={0}
@@ -150,97 +177,102 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
         );
       })}
 
-      {/* Color-coded key above the block */}
-      <Rect
-        x={0}
-        y={-80}
-        width={block.width}
-        height={70}
-        fill="#ffffff"
-        stroke="#e5e7eb"
-        strokeWidth={1}
-        cornerRadius={6}
-        shadowColor="rgba(0, 0, 0, 0.1)"
-        shadowBlur={4}
-        shadowOffset={{ x: 0, y: 2 }}
-        shadowOpacity={1}
-        listening={false}
-      />
-      
-      {/* Hotel title and dates */}
-      <Text
-        x={10}
-        y={-70}
-        text={`${block.hotelName} - ${block.location}`}
-        fontSize={16}
-        fontFamily="Inter, system-ui, sans-serif"
-        fill="#1f2937"
-        fontStyle="bold"
-        listening={false}
-      />
-      
-      {/* Hotel dates */}
-      {block.dateRange && (
-        <Text
-          x={10}
-          y={-55}
-          text={`${block.dateRange.start.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric',
-            year: 'numeric'
-          })} - ${block.dateRange.end.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric',
-            year: 'numeric'
-          })}`}
-          fontSize={14}
-          fontFamily="Inter, system-ui, sans-serif"
-          fill="#6b7280"
-          listening={false}
-        />
-      )}
-      
-      {/* Hotel events key */}
-      {block.events.map((event, index) => {
-        const keyX = 10 + (index * 200); // Space events horizontally
-        
-        return (
-          <Group key={`key-${event.id}`}>
-            {/* Color indicator */}
-            <Rect
-              x={keyX}
-              y={-30}
-              width={12}
-              height={12}
-              fill={HOTEL_COLORS[event.type]}
-              cornerRadius={2}
-              listening={false}
-            />
-            
-            {/* Event info */}
+      {/* Individual label - only show if not part of a relationship or if this is a child */}
+      {!isPartOfRelationship && (
+        <>
+          {/* Color-coded key above the block */}
+          <Rect
+            x={0}
+            y={-80}
+            width={block.width}
+            height={70}
+            fill="#ffffff"
+            stroke="#e5e7eb"
+            strokeWidth={1}
+            cornerRadius={6}
+            shadowColor="rgba(0, 0, 0, 0.1)"
+            shadowBlur={4}
+            shadowOffset={{ x: 0, y: 2 }}
+            shadowOpacity={1}
+            listening={false}
+          />
+          
+          {/* Hotel title and dates */}
+          <Text
+            x={10}
+            y={-70}
+            text={`${block.hotelName} - ${block.location}`}
+            fontSize={16}
+            fontFamily="Inter, system-ui, sans-serif"
+            fill="#1f2937"
+            fontStyle="bold"
+            listening={false}
+          />
+          
+          {/* Hotel dates */}
+          {block.dateRange && (
             <Text
-              x={keyX + 18}
-              y={-28}
-              text={`${event.type.toUpperCase()} - ${event.date}`}
-              fontSize={12}
-              fontFamily="Inter, system-ui, sans-serif"
-              fill="#374151"
-              listening={false}
-            />
-            
-            {/* Hotel name */}
-            <Text
-              x={keyX + 18}
-              y={-16}
-              text={event.hotelName}
-              fontSize={10}
+              x={10}
+              y={-55}
+              text={`${block.dateRange.start.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                year: 'numeric'
+              })} - ${block.dateRange.end.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                year: 'numeric'
+              })}`}
+              fontSize={14}
               fontFamily="Inter, system-ui, sans-serif"
               fill="#6b7280"
               listening={false}
             />
-          </Group>
-        );
-      })}
+          )}
+          
+          {/* Hotel events key */}
+          {block.events.map((event, index) => {
+            const keyX = 10 + (index * 200); // Space events horizontally
+            
+            return (
+              <Group key={`key-${event.id}`}>
+                {/* Color indicator */}
+                <Rect
+                  x={keyX}
+                  y={-30}
+                  width={12}
+                  height={12}
+                  fill={HOTEL_COLORS[event.type]}
+                  cornerRadius={2}
+                  listening={false}
+                />
+                
+                {/* Event info */}
+                <Text
+                  x={keyX + 18}
+                  y={-28}
+                  text={`${event.type.toUpperCase()} - ${event.date}`}
+                  fontSize={12}
+                  fontFamily="Inter, system-ui, sans-serif"
+                  fill="#374151"
+                  listening={false}
+                />
+                
+                {/* Hotel name */}
+                <Text
+                  x={keyX + 18}
+                  y={-16}
+                  text={event.hotelName}
+                  fontSize={10}
+                  fontFamily="Inter, system-ui, sans-serif"
+                  fill="#6b7280"
+                  listening={false}
+                />
+              </Group>
+            );
+          })}
+        </>
+      )}
       
     </Group>
   );
