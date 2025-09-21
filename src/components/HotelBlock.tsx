@@ -60,9 +60,8 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
   // Only show label if this block is the PARENT in the relationship (not a child)
   const shouldShowLabel = currentRelationship && currentRelationship.parent.id === block.id;
   
-  // Get colors for this block
-  const isGrouped = Boolean(currentRelationship && currentRelationship.parent.id === block.id);
-  const colors = getBlockColors('hotel', isGrouped, currentRelationship?.relationshipType);
+  // Get colors for this block - always use individual hotel colors
+  const colors = getBlockColors('hotel', false, null);
 
   const handleClick = (e: KonvaEvent) => {
     e.cancelBubble = true; // Prevent event bubbling to stage

@@ -32,8 +32,9 @@ export function UnifiedLabel({ block, relationship, x, y, width }: UnifiedLabelP
   // Calculate label height based on content
   const baseHeight = 50;
   const detailsHeight = (isGrouped || details) ? 40 : 20; // More space for grouped labels or individual with details
-  const colorKeyHeight = 16; // Space for color key
-  const totalHeight = baseHeight + detailsHeight + colorKeyHeight;
+  const colorLegend = getColorLegend(block, colors, isGrouped, relationship);
+  const colorLegendHeight = colorLegend.length * 14; // 14px per legend item
+  const totalHeight = baseHeight + detailsHeight + colorLegendHeight;
   
   // Position the label floating above the blocks
   const labelY = y - totalHeight - 15; // 15px gap above blocks
@@ -134,30 +135,38 @@ export function UnifiedLabel({ block, relationship, x, y, width }: UnifiedLabelP
         />
       )}
       
-      {/* Color key */}
+      {/* Detailed color legend */}
       <Group>
-        {/* Color indicator */}
-        <Rect
-          x={x + 8}
-          y={labelY + (details ? 62 : 48)}
-          width={8}
-          height={8}
-          fill={colors.primary}
-          cornerRadius={2}
-          listening={false}
-        />
-        
-        {/* Color name */}
-        <Text
-          x={x + 20}
-          y={labelY + (details ? 64 : 50)}
-          text={colors.name}
-          fontSize={9}
-          fontFamily="Inter, system-ui, sans-serif"
-          fill={colors.textSecondary}
-          fontStyle="bold"
-          listening={false}
-        />
+        {getColorLegend(block, colors, isGrouped, relationship).map((legendItem, index) => {
+          const legendY = labelY + (details ? 62 : 48) + (index * 14);
+          
+          return (
+            <Group key={legendItem.label}>
+              {/* Color indicator */}
+              <Rect
+                x={x + 8}
+                y={legendY}
+                width={8}
+                height={8}
+                fill={legendItem.color}
+                cornerRadius={2}
+                listening={false}
+              />
+              
+              {/* Color label */}
+              <Text
+                x={x + 20}
+                y={legendY + 2}
+                text={legendItem.label}
+                fontSize={9}
+                fontFamily="Inter, system-ui, sans-serif"
+                fill={colors.textSecondary}
+                fontStyle="bold"
+                listening={false}
+              />
+            </Group>
+          );
+        })}
       </Group>
       
       {/* Day indicators - only show for grouped blocks */}
@@ -391,4 +400,152 @@ function getComprehensiveDetails(relationship: BlockRelationship): string {
   }
   
   return details.slice(0, 3).join(' • ');
+}
+
+// Get color legend for the label
+function getColorLegend(block: CanvasBlock | FlightBlock | HotelBlock | ActivityBlock, colors: { primary: string; accent: string; textSecondary: string; name: string }, isGrouped: boolean, relationship?: BlockRelationship | null): Array<{color: string, label: string}> {
+  const legend: Array<{color: string, label: string}> = [];
+  
+  if (isGrouped && relationship) {
+    // For grouped blocks, show colors for both parent and children
+    const allBlocks = [relationship.parent, ...relationship.children];
+    
+    allBlocks.forEach(blockItem => {
+      if ('type' in blockItem) {
+        // Get the individual block colors for this specific block
+        const blockColors = getBlockColors(blockItem.type, false, null);
+        
+        switch (blockItem.type) {
+          case 'flight': {
+            const flight = blockItem as FlightBlock;
+            const segmentTypes = [...new Set(flight.segments.map(s => s.type))];
+            segmentTypes.forEach(segmentType => {
+              const segmentColors = {
+                outbound: blockColors.primary,
+                return: blockColors.accent,
+                connecting: blockColors.textSecondary
+              };
+              const labels = {
+                outbound: 'Outbound Flight',
+                return: 'Return Flight',
+                connecting: 'Connecting Flight'
+              };
+              legend.push({
+                color: segmentColors[segmentType],
+                label: labels[segmentType]
+              });
+            });
+            break;
+          }
+          case 'hotel': {
+            const hotel = blockItem as HotelBlock;
+            if (hotel.events && hotel.events.length > 0) {
+              const eventTypes = [...new Set(hotel.events.map(e => e.type))];
+              
+              eventTypes.forEach(eventType => {
+                const eventColors = {
+                  checkin: blockColors.primary,
+                  checkout: blockColors.accent
+                };
+                const labels = {
+                  checkin: 'Hotel Check-in',
+                  checkout: 'Hotel Check-out'
+                };
+                legend.push({
+                  color: eventColors[eventType],
+                  label: labels[eventType]
+                });
+              });
+            } else {
+              // If no events, add a generic hotel entry
+              legend.push({
+                color: blockColors.primary,
+                label: 'Hotel Stay'
+              });
+            }
+            break;
+          }
+          case 'activity': {
+            legend.push({
+              color: blockColors.primary,
+              label: 'Activity'
+            });
+            break;
+          }
+        }
+      }
+    });
+  } else {
+    // For individual blocks, show only that block's colors
+    if ('type' in block) {
+      switch (block.type) {
+        case 'flight': {
+          const flight = block as FlightBlock;
+          const segmentTypes = [...new Set(flight.segments.map(s => s.type))];
+          segmentTypes.forEach(segmentType => {
+            const segmentColors = {
+              outbound: colors.primary,
+              return: colors.accent,
+              connecting: colors.textSecondary
+            };
+            const labels = {
+              outbound: 'Outbound Flight',
+              return: 'Return Flight',
+              connecting: 'Connecting Flight'
+            };
+            legend.push({
+              color: segmentColors[segmentType],
+              label: labels[segmentType]
+            });
+          });
+          break;
+        }
+            case 'hotel': {
+              const hotel = block as HotelBlock;
+              const eventTypes = [...new Set(hotel.events.map(e => e.type))];
+              eventTypes.forEach(eventType => {
+                const eventColors = {
+                  checkin: colors.primary,
+                  checkout: colors.accent
+                };
+                const labels = {
+                  checkin: 'Hotel Check-in',
+                  checkout: 'Hotel Check-out'
+                };
+                legend.push({
+                  color: eventColors[eventType],
+                  label: labels[eventType]
+                });
+              });
+              break;
+            }
+        case 'activity': {
+          legend.push({
+            color: colors.primary,
+            label: 'Activity'
+          });
+          break;
+        }
+        default: {
+          legend.push({
+            color: colors.primary,
+            label: 'Block'
+          });
+          break;
+        }
+      }
+    } else {
+      legend.push({
+        color: colors.primary,
+        label: 'Block'
+      });
+    }
+  }
+  
+  // Remove duplicates based on label
+  const uniqueLegend = legend.filter((item, index, self) => 
+    index === self.findIndex(t => t.label === item.label)
+  );
+  
+  return uniqueLegend;
 }
