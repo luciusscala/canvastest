@@ -24,7 +24,7 @@ export function useSnapping(
     
     // Only try to snap if we have a trip timeline
     if (tripTimeline) {
-      const snapResult = findSnapTarget(block, allBlocks, newX, newY, tripTimeline);
+      const snapResult = findSnapTarget(block, allBlocks, newX, newY);
       setSnappingResult(snapResult);
     } else {
       setSnappingResult(null);
@@ -44,18 +44,13 @@ export function useSnapping(
       snappedY = snappingResult.snapY;
     } else if (tripTimeline) {
       // Validate placement for blocks with time data
-      const validation = validatePlacement(block, finalX, finalY, allBlocks, tripTimeline);
+      const validation = validatePlacement(block, finalX, finalY, allBlocks);
       
       if (!validation.isValid) {
-        // Revert to correct position for time-based blocks
-        if (block.startHour !== undefined && block.durationHours !== undefined) {
-          const correctPosition = {
-            x: block.startHour * tripTimeline.scale,
-            y: finalY
-          };
-          snappedX = correctPosition.x;
-          snappedY = correctPosition.y;
-        }
+        // Only revert position if there are actual conflicts, not for free movement
+        // For free movement, allow the block to stay where it was dragged
+        snappedX = finalX;
+        snappedY = finalY;
       }
     } else {
       // Snap to grid for blocks without time data

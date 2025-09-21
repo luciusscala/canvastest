@@ -2,12 +2,20 @@ import type {
   CanvasBlock, 
   FlightBlock, 
   HotelBlock, 
-  ActivityBlock, 
-  TripTimeline
+  ActivityBlock
 } from '../types/index';
-import { calculateBlockPosition } from './timeUtils';
 
 type AnyBlock = CanvasBlock | FlightBlock | HotelBlock | ActivityBlock;
+
+// Type guard to check if a block has contextBarHeight
+function hasContextBarHeight(block: AnyBlock): block is FlightBlock | HotelBlock {
+  return 'contextBarHeight' in block;
+}
+
+// Type guard to check if a block has segmentHeight
+function hasSegmentHeight(block: AnyBlock): block is FlightBlock {
+  return 'segmentHeight' in block;
+}
 
 export interface SimpleSnapResult {
   shouldSnap: boolean;
@@ -23,13 +31,13 @@ export function canSnapToParent(
   parentBlock: AnyBlock
 ): boolean {
   // Flight blocks can contain hotels and activities
-  if (parentBlock.type === 'flight') {
-    return draggedBlock.type === 'hotel' || draggedBlock.type === 'activity';
+  if ('type' in parentBlock && parentBlock.type === 'flight') {
+    return ('type' in draggedBlock) && (draggedBlock.type === 'hotel' || draggedBlock.type === 'activity');
   }
   
   // Hotel blocks can contain activities
-  if (parentBlock.type === 'hotel') {
-    return draggedBlock.type === 'activity';
+  if ('type' in parentBlock && parentBlock.type === 'hotel') {
+    return ('type' in draggedBlock) && draggedBlock.type === 'activity';
   }
   
   // Regular blocks can contain any type
@@ -69,8 +77,7 @@ export function calculateSnapPosition(
   draggedBlock: AnyBlock,
   parentBlock: AnyBlock,
   draggedX: number,
-  draggedY: number,
-  tripTimeline: TripTimeline
+  draggedY: number
 ): SimpleSnapResult {
   // Check if blocks have time data
   if (!draggedBlock.startHour || !draggedBlock.durationHours ||
@@ -109,9 +116,8 @@ export function calculateSnapPosition(
   
   // Calculate Y position based on block type hierarchy
   const snapY = calculateVerticalSnapPosition(
-    draggedBlock.type || 'regular',
-    parentBlock,
-    draggedY
+    ('type' in draggedBlock) ? draggedBlock.type : 'regular',
+    parentBlock
   );
   
   return {
@@ -119,25 +125,26 @@ export function calculateSnapPosition(
     snapX,
     snapY,
     parentId: parentBlock.id,
-    snapType: draggedBlock.type as 'hotel' | 'activity'
+    snapType: (('type' in draggedBlock) ? draggedBlock.type : 'regular') as 'hotel' | 'activity'
   };
 }
 
 // Calculate vertical snap position based on block hierarchy
 function calculateVerticalSnapPosition(
   childType: string,
-  parentBlock: AnyBlock,
-  draggedY: number
+  parentBlock: AnyBlock
 ): number {
-  const snapOffsets: Record<string, (parent: any) => number> = {
-    'hotel': (parent) => parent.contextBarHeight + 10,
+  const snapOffsets: Record<string, (parent: AnyBlock) => number> = {
+    'hotel': (parent) => hasContextBarHeight(parent) ? parent.contextBarHeight + 10 : 10,
     'activity': (parent) => {
-      if (parent.type === 'hotel') {
-        return parent.contextBarHeight + 10;
-      } else if (parent.type === 'flight') {
-        return parent.contextBarHeight + parent.segmentHeight + 10;
+      if ('type' in parent && parent.type === 'hotel') {
+        return hasContextBarHeight(parent) ? parent.contextBarHeight + 10 : 10;
+      } else if ('type' in parent && parent.type === 'flight') {
+        return hasContextBarHeight(parent) && hasSegmentHeight(parent)
+          ? parent.contextBarHeight + parent.segmentHeight + 10 
+          : 10;
       }
-      return parent.contextBarHeight + 10;
+      return hasContextBarHeight(parent) ? parent.contextBarHeight + 10 : 10;
     }
   };
   
@@ -150,8 +157,7 @@ export function findSnapTarget(
   draggedBlock: AnyBlock,
   allBlocks: AnyBlock[],
   draggedX: number,
-  draggedY: number,
-  tripTimeline: TripTimeline
+  draggedY: number
 ): SimpleSnapResult {
   // Only look for parent blocks to snap to
   for (const block of allBlocks) {
@@ -164,7 +170,7 @@ export function findSnapTarget(
     if (!isOverParent(draggedBlock, block, draggedX, draggedY)) continue;
     
     // Calculate snap position
-    const snapResult = calculateSnapPosition(draggedBlock, block, draggedX, draggedY, tripTimeline);
+    const snapResult = calculateSnapPosition(draggedBlock, block, draggedX, draggedY);
     
     if (snapResult.shouldSnap) {
       return snapResult;
@@ -185,47 +191,35 @@ export function validatePlacement(
   draggedBlock: AnyBlock,
   targetX: number,
   targetY: number,
-  allBlocks: AnyBlock[],
-  tripTimeline: TripTimeline
+  allBlocks: AnyBlock[]
 ): { isValid: boolean; message?: string } {
-  // For blocks with time data, check if they're at their correct time position
-  if (draggedBlock.startHour !== undefined && draggedBlock.durationHours !== undefined) {
-    const correctPosition = calculateBlockPosition(
-      draggedBlock.startHour,
-      draggedBlock.durationHours,
-      tripTimeline.scale
-    );
-    
-    const snapThreshold = 50;
-    
-    if (Math.abs(targetX - correctPosition.x) > snapThreshold) {
-      return {
-        isValid: false,
-        message: 'Block must be placed at its correct time position'
-      };
-    }
-  }
+  // Only check for actual spatial conflicts, not time-based positioning
+  // For free movement, blocks can be placed anywhere unless there are real conflicts
   
-  // Check for conflicts with other blocks
+  // Check for spatial overlaps with other blocks
   for (const block of allBlocks) {
     if (block.id === draggedBlock.id) continue;
     
-    // Check for time conflicts
-    if (draggedBlock.startHour !== undefined && draggedBlock.durationHours !== undefined &&
-        block.startHour !== undefined && block.durationHours !== undefined) {
-      
-      const draggedStart = draggedBlock.startHour;
-      const draggedEnd = draggedStart + draggedBlock.durationHours;
-      const blockStart = block.startHour;
-      const blockEnd = blockStart + block.durationHours;
-      
-      // Check for overlap
-      if (!(draggedEnd <= blockStart || blockEnd <= draggedStart)) {
-        return {
-          isValid: false,
-          message: `Time conflict with ${block.type} block`
-        };
-      }
+    // Check if blocks overlap spatially
+    const draggedLeft = targetX;
+    const draggedRight = targetX + draggedBlock.width;
+    const draggedTop = targetY;
+    const draggedBottom = targetY + draggedBlock.height;
+    
+    const blockLeft = block.x;
+    const blockRight = block.x + block.width;
+    const blockTop = block.y;
+    const blockBottom = block.y + block.height;
+    
+    // Check for spatial overlap
+    if (!(draggedRight <= blockLeft || 
+          draggedLeft >= blockRight || 
+          draggedBottom <= blockTop || 
+          draggedTop >= blockBottom)) {
+      return {
+        isValid: false,
+        message: `Spatial conflict with ${('type' in block) ? block.type : 'regular'} block`
+      };
     }
   }
   
