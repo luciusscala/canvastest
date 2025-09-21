@@ -68,25 +68,30 @@ const RELATIONSHIP_COLORS = {
 };
 
 export function UnifiedLabel({ block, relationship, x, y, width }: UnifiedLabelProps) {
+  // Don't show label if this block is a child in a relationship
+  if (relationship !== null && relationship !== undefined && relationship.parent.id !== block.id) {
+    return null;
+  }
+  
   // Only show grouped label if this block is the parent in the relationship
-  const isGrouped = relationship !== null && relationship.parent.id === block.id;
+  const isGrouped = relationship !== null && relationship !== undefined && relationship.parent.id === block.id;
   const blockType = ('type' in block) ? block.type : 'regular';
+  
+  // Get the main title and subtitle first
+  const { title, subtitle, details } = getLabelContent(block, relationship || null);
   
   // Choose colors based on whether it's grouped or individual
   const colors = isGrouped 
-    ? RELATIONSHIP_COLORS[relationship.relationshipType] || RELATIONSHIP_COLORS['flight-hotel']
+    ? RELATIONSHIP_COLORS[(relationship?.relationshipType as keyof typeof RELATIONSHIP_COLORS) || 'flight-hotel'] || RELATIONSHIP_COLORS['flight-hotel']
     : BLOCK_COLORS[blockType] || BLOCK_COLORS.regular;
 
   // Calculate label height based on content
   const baseHeight = 50;
-  const detailsHeight = isGrouped ? 20 : 0;
+  const detailsHeight = (isGrouped || details) ? 40 : 20; // More space for grouped labels or individual with details
   const totalHeight = baseHeight + detailsHeight;
   
   // Position the label floating above the blocks
   const labelY = y - totalHeight - 15; // 15px gap above blocks
-  
-  // Get the main title and subtitle
-  const { title, subtitle, details } = getLabelContent(block, relationship);
   
   return (
     <Group>
@@ -128,16 +133,16 @@ export function UnifiedLabel({ block, relationship, x, y, width }: UnifiedLabelP
       />
       
       {/* Type label */}
-      <Text
-        x={x + 18}
-        y={labelY + 4}
-        text={getTypeLabel(block, relationship)}
-        fontSize={9}
-        fontFamily="Inter, system-ui, sans-serif"
-        fill={colors.text}
-        fontStyle="bold"
-        listening={false}
-      />
+        <Text
+          x={x + 18}
+          y={labelY + 4}
+          text={getTypeLabel(block, relationship || null)}
+          fontSize={9}
+          fontFamily="Inter, system-ui, sans-serif"
+          fill={colors.text}
+          fontStyle="bold"
+          listening={false}
+        />
       
       {/* Main title */}
       <Text
@@ -168,8 +173,8 @@ export function UnifiedLabel({ block, relationship, x, y, width }: UnifiedLabelP
         listening={false}
       />
       
-      {/* Details for grouped labels */}
-      {isGrouped && details && (
+      {/* Details for both grouped and individual labels */}
+      {details && (
         <Text
           x={x + 8}
           y={labelY + 48}
@@ -188,7 +193,7 @@ export function UnifiedLabel({ block, relationship, x, y, width }: UnifiedLabelP
 }
 
 // Get the type label for the indicator
-function getTypeLabel(block: any, relationship: BlockRelationship | null): string {
+function getTypeLabel(block: CanvasBlock | FlightBlock | HotelBlock | ActivityBlock, relationship: BlockRelationship | null): string {
   if (relationship) {
     return relationship.relationshipType.replace('-', ' + ').toUpperCase();
   }
@@ -201,7 +206,7 @@ function getTypeLabel(block: any, relationship: BlockRelationship | null): strin
 }
 
 // Get the main content for the label
-function getLabelContent(block: any, relationship: BlockRelationship | null) {
+function getLabelContent(block: CanvasBlock | FlightBlock | HotelBlock | ActivityBlock, relationship: BlockRelationship | null) {
   if (relationship) {
     return getGroupedLabelContent(block, relationship);
   } else {
@@ -210,23 +215,26 @@ function getLabelContent(block: any, relationship: BlockRelationship | null) {
 }
 
 // Get content for grouped labels
-function getGroupedLabelContent(block: any, relationship: BlockRelationship) {
+function getGroupedLabelContent(_block: CanvasBlock | FlightBlock | HotelBlock | ActivityBlock, relationship: BlockRelationship) {
   const parent = relationship.parent;
-  const children = relationship.children;
   
-  // Create a concise title
+  // Create a comprehensive title
   let title = '';
-  if (parent.type === 'flight') {
-    title = `${parent.title} + ${children.length} ${children[0]?.type || 'item'}${children.length > 1 ? 's' : ''}`;
+  if ('type' in parent && parent.type === 'flight') {
+    const flight = parent as FlightBlock;
+    title = `${flight.title} - ${flight.departureAirport} → ${flight.arrivalAirport}`;
+  } else if ('type' in parent && parent.type === 'hotel') {
+    const hotel = parent as HotelBlock;
+    title = `${hotel.hotelName} - ${hotel.location}`;
   } else {
-    title = `${parent.title} + ${children.length} item${children.length > 1 ? 's' : ''}`;
+    title = parent.title;
   }
   
-  // Create a summary
-  const summary = createSummary(relationship);
+  // Create a detailed summary
+  const summary = createDetailedSummary(relationship);
   
-  // Get key details
-  const details = getKeyDetails(relationship);
+  // Get comprehensive details
+  const details = getComprehensiveDetails(relationship);
   
   return {
     title,
@@ -236,26 +244,74 @@ function getGroupedLabelContent(block: any, relationship: BlockRelationship) {
 }
 
 // Get content for individual labels
-function getIndividualLabelContent(block: any) {
+function getIndividualLabelContent(block: CanvasBlock | FlightBlock | HotelBlock | ActivityBlock) {
   let title = '';
   let subtitle = '';
+  let details = '';
   
   if ('type' in block) {
     switch (block.type) {
-      case 'flight':
-        title = `${block.title} - ${block.departureAirport} → ${block.arrivalAirport}`;
-        subtitle = `${block.segments.length} segment${block.segments.length > 1 ? 's' : ''} • ${block.totalHours}h`;
+      case 'flight': {
+        const flight = block as FlightBlock;
+        title = `${flight.title} - ${flight.departureAirport} → ${flight.arrivalAirport}`;
+        subtitle = `${flight.segments.length} segment${flight.segments.length > 1 ? 's' : ''} • ${flight.totalHours}h`;
+        
+        // Add flight details
+        const firstSegment = flight.segments[0];
+        if (firstSegment) {
+          details = `${firstSegment.flightNumber} (${firstSegment.departure}→${firstSegment.arrival})`;
+        }
+        
+        // Add date range if available
+        if (flight.dateRange) {
+          const startDate = flight.dateRange.start.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric'
+          });
+          const endDate = flight.dateRange.end.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric'
+          });
+          details += ` • ${startDate} - ${endDate}`;
+        }
         break;
-      case 'hotel':
-        title = `${block.hotelName} - ${block.location}`;
-        subtitle = `${block.events.length} event${block.events.length > 1 ? 's' : ''} • ${block.totalDays} day${block.totalDays > 1 ? 's' : ''}`;
+      }
+      case 'hotel': {
+        const hotel = block as HotelBlock;
+        title = `${hotel.hotelName} - ${hotel.location}`;
+        subtitle = `${hotel.events.length} event${hotel.events.length > 1 ? 's' : ''} • ${hotel.totalDays} day${hotel.totalDays > 1 ? 's' : ''}`;
+        
+        // Add hotel details
+        if (hotel.events.length > 0) {
+          const eventTypes = [...new Set(hotel.events.map((e) => e.type))];
+          details = eventTypes.join(', ').toUpperCase();
+        }
+        
+        // Add date range if available
+        if (hotel.dateRange) {
+          const startDate = hotel.dateRange.start.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric'
+          });
+          const endDate = hotel.dateRange.end.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric'
+          });
+          details += ` • ${startDate} - ${endDate}`;
+        }
         break;
-      case 'activity':
-        title = block.title;
-        subtitle = `${block.activityType} • ${block.durationHours}h`;
+      }
+      case 'activity': {
+        const activity = block as ActivityBlock;
+        title = activity.title;
+        subtitle = `${activity.activityType} • ${activity.durationHours}h`;
+        
+        // Add activity details - use activityType as details since description doesn't exist
+        details = activity.activityType;
         break;
+      }
       default:
-        title = block.title;
+        title = 'title' in block ? block.title : 'Block';
         subtitle = 'Block';
     }
   } else {
@@ -266,24 +322,30 @@ function getIndividualLabelContent(block: any) {
   return {
     title,
     subtitle,
-    details: null
+    details: details || null
   };
 }
 
-// Create a summary for grouped labels
-function createSummary(relationship: BlockRelationship): string {
+// Create a detailed summary for grouped labels
+function createDetailedSummary(relationship: BlockRelationship): string {
   const parts = [];
   
-  if (relationship.parent.type === 'flight') {
-    parts.push(`${relationship.parent.segments.length} flight${relationship.parent.segments.length > 1 ? 's' : ''}`);
+  // Parent information
+  if ('type' in relationship.parent && relationship.parent.type === 'flight') {
+    const flight = relationship.parent as FlightBlock;
+    parts.push(`${flight.segments.length} segment${flight.segments.length > 1 ? 's' : ''} • ${flight.totalHours}h`);
+  } else if ('type' in relationship.parent && relationship.parent.type === 'hotel') {
+    const hotel = relationship.parent as HotelBlock;
+    parts.push(`${hotel.events.length} event${hotel.events.length > 1 ? 's' : ''} • ${hotel.totalDays} day${hotel.totalDays > 1 ? 's' : ''}`);
   }
   
-  const hotelCount = relationship.children.filter(child => child.type === 'hotel').length;
+  // Children information
+  const hotelCount = relationship.children.filter(child => 'type' in child && child.type === 'hotel').length;
   if (hotelCount > 0) {
     parts.push(`${hotelCount} hotel${hotelCount > 1 ? 's' : ''}`);
   }
   
-  const activityCount = relationship.children.filter(child => child.type === 'activity').length;
+  const activityCount = relationship.children.filter(child => 'type' in child && child.type === 'activity').length;
   if (activityCount > 0) {
     parts.push(`${activityCount} activit${activityCount > 1 ? 'ies' : 'y'}`);
   }
@@ -291,28 +353,60 @@ function createSummary(relationship: BlockRelationship): string {
   return parts.join(' • ');
 }
 
-// Get key details for grouped labels
-function getKeyDetails(relationship: BlockRelationship): string {
+// Get comprehensive details for grouped labels
+function getComprehensiveDetails(relationship: BlockRelationship): string {
   const details = [];
   
   // Add parent details
-  if (relationship.parent.type === 'flight') {
-    const firstSegment = relationship.parent.segments[0];
+  if ('type' in relationship.parent && relationship.parent.type === 'flight') {
+    const flight = relationship.parent as FlightBlock;
+    const firstSegment = flight.segments[0];
     if (firstSegment) {
       details.push(`${firstSegment.flightNumber} (${firstSegment.departure}→${firstSegment.arrival})`);
+    }
+    
+    // Add date range if available
+    if (flight.dateRange) {
+      const startDate = flight.dateRange.start.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric'
+      });
+      const endDate = flight.dateRange.end.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric'
+      });
+      details.push(`${startDate} - ${endDate}`);
+    }
+  } else if ('type' in relationship.parent && relationship.parent.type === 'hotel') {
+    const hotel = relationship.parent as HotelBlock;
+    details.push(`${hotel.hotelName}`);
+    
+    // Add date range if available
+    if (hotel.dateRange) {
+      const startDate = hotel.dateRange.start.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric'
+      });
+      const endDate = hotel.dateRange.end.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric'
+      });
+      details.push(`${startDate} - ${endDate}`);
     }
   }
   
   // Add child details
-  const hotel = relationship.children.find(child => child.type === 'hotel');
+  const hotel = relationship.children.find(child => 'type' in child && child.type === 'hotel');
   if (hotel) {
-    details.push(`${hotel.hotelName}`);
+    const hotelData = hotel as HotelBlock;
+    details.push(`${hotelData.hotelName} - ${hotelData.location}`);
   }
   
-  const activity = relationship.children.find(child => child.type === 'activity');
+  const activity = relationship.children.find(child => 'type' in child && child.type === 'activity');
   if (activity) {
-    details.push(`${activity.title}`);
+    const activityData = activity as ActivityBlock;
+    details.push(`${activityData.title} (${activityData.activityType})`);
   }
   
-  return details.slice(0, 2).join(' • ');
+  return details.slice(0, 3).join(' • ');
 }
