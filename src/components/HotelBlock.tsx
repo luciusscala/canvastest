@@ -4,6 +4,7 @@ import type { HotelBlock } from '../types/index';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { useSnapping } from '../hooks/useSnapping';
 import { UnifiedLabel } from './UnifiedLabel';
+import { getBlockColors } from '../utils/colors';
 
 type KonvaEvent = {
   target: {
@@ -21,11 +22,11 @@ interface HotelBlockProps {
   onDragEnd: () => void;
 }
 
-// Color mapping for hotel events
-const HOTEL_COLORS = {
-  checkin: '#059669', // Green
-  checkout: '#dc2626', // Red
-};
+// Color mapping for hotel events - will be updated dynamically
+const getHotelEventColors = (colors: { primary: string; accent: string }) => ({
+  checkin: colors.primary,
+  checkout: colors.accent
+});
 
 export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
   const { selectBlock, updateBlock, blocks, getRelationshipsForBlock } = useCanvasStore();
@@ -58,6 +59,10 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
   
   // Only show label if this block is the PARENT in the relationship (not a child)
   const shouldShowLabel = currentRelationship && currentRelationship.parent.id === block.id;
+  
+  // Get colors for this block
+  const isGrouped = Boolean(currentRelationship && currentRelationship.parent.id === block.id);
+  const colors = getBlockColors('hotel', isGrouped, currentRelationship?.relationshipType);
 
   const handleClick = (e: KonvaEvent) => {
     e.cancelBubble = true; // Prevent event bubbling to stage
@@ -153,6 +158,7 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
       {block.events.map((event) => {
         const { x: eventX, width: eventWidth } = getEventDimensions(event);
         const isSelected = selectedEventId === event.id;
+        const eventColors = getHotelEventColors(colors);
         
         return (
           <Group key={event.id}>
@@ -162,8 +168,8 @@ export function HotelBlock({ block, onDragStart, onDragEnd }: HotelBlockProps) {
               y={0}
               width={eventWidth}
               height={block.eventHeight}
-              fill={HOTEL_COLORS[event.type]}
-              stroke={isSelected ? '#fbbf24' : '#ffffff'} // Yellow outline when selected
+              fill={eventColors[event.type]}
+              stroke={isSelected ? '#fbbf24' : colors.text} // Yellow outline when selected, otherwise use text color
               strokeWidth={isSelected ? 3 : 1}
               cornerRadius={2}
               onClick={(e) => handleEventClick(event.id, e)}

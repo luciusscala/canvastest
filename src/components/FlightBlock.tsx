@@ -4,6 +4,7 @@ import type { FlightBlock, FlightSegment } from '../types/index';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { useSnapping } from '../hooks/useSnapping';
 import { UnifiedLabel } from './UnifiedLabel';
+import { getBlockColors } from '../utils/colors';
 
 type KonvaEvent = {
   target: {
@@ -21,12 +22,12 @@ interface FlightBlockProps {
   onDragEnd: () => void;
 }
 
-// Color mapping for different segment types
-const SEGMENT_COLORS = {
-  outbound: '#dc2626', // Red
-  return: '#2563eb',   // Blue
-  connecting: '#059669', // Green
-};
+// Color mapping for different segment types - will be updated dynamically
+const getSegmentColors = (colors: { primary: string; accent: string; textSecondary: string }) => ({
+  outbound: colors.primary,
+  return: colors.accent,
+  connecting: colors.textSecondary
+});
 
 export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps) {
   const { selectBlock, updateBlock, getRelationshipsForBlock, blocks, tripTimeline } = useCanvasStore();
@@ -58,6 +59,10 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
   
   // Only show label if this block is the PARENT in the relationship (not a child)
   const shouldShowLabel = currentRelationship && currentRelationship.parent.id === block.id;
+  
+  // Get colors for this block
+  const isGrouped = Boolean(currentRelationship && currentRelationship.parent.id === block.id);
+  const colors = getBlockColors('flight', isGrouped, currentRelationship?.relationshipType);
 
   const handleClick = (e: KonvaEvent) => {
     e.cancelBubble = true; // Prevent event bubbling to stage
@@ -152,6 +157,7 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
       {block.segments.map((segment) => {
         const { x: segmentX, width: segmentWidth } = getSegmentDimensions(segment);
         const isSelected = selectedSegmentId === segment.id;
+        const segmentColors = getSegmentColors(colors);
         
         return (
           <Group key={segment.id}>
@@ -161,8 +167,8 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
               y={0}
               width={segmentWidth}
               height={block.segmentHeight}
-              fill={SEGMENT_COLORS[segment.type]}
-              stroke={isSelected ? '#fbbf24' : '#ffffff'} // Yellow outline when selected
+              fill={segmentColors[segment.type]}
+              stroke={isSelected ? '#fbbf24' : colors.text} // Yellow outline when selected, otherwise use text color
               strokeWidth={isSelected ? 3 : 1}
               cornerRadius={2}
               onClick={(e) => handleSegmentClick(segment.id, e)}

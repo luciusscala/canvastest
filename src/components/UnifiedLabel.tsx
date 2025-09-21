@@ -2,6 +2,7 @@ import { Group, Rect, Text, Line } from 'react-konva';
 import type { CanvasBlock, FlightBlock, HotelBlock, ActivityBlock } from '../types/index';
 import type { BlockRelationship } from '../utils/blockRelationships';
 import { DayIndicators } from './DayIndicators';
+import { getBlockColors } from '../utils/colors';
 
 interface UnifiedLabelProps {
   block: CanvasBlock | FlightBlock | HotelBlock | ActivityBlock;
@@ -11,62 +12,6 @@ interface UnifiedLabelProps {
   width: number;
 }
 
-// Color scheme for different block types
-const BLOCK_COLORS = {
-  flight: {
-    primary: '#dc2626',    // Red
-    secondary: '#fef2f2',  // Light red
-    accent: '#fca5a5',     // Medium red
-    text: '#991b1b',       // Dark red
-    textSecondary: '#7f1d1d' // Darker red
-  },
-  hotel: {
-    primary: '#059669',    // Green
-    secondary: '#f0fdf4',  // Light green
-    accent: '#86efac',     // Medium green
-    text: '#064e3b',       // Dark green
-    textSecondary: '#052e16' // Darker green
-  },
-  activity: {
-    primary: '#3b82f6',    // Blue
-    secondary: '#eff6ff',  // Light blue
-    accent: '#93c5fd',     // Medium blue
-    text: '#1e40af',       // Dark blue
-    textSecondary: '#1e3a8a' // Darker blue
-  },
-  regular: {
-    primary: '#6b7280',    // Gray
-    secondary: '#f9fafb',  // Light gray
-    accent: '#d1d5db',     // Medium gray
-    text: '#374151',       // Dark gray
-    textSecondary: '#1f2937' // Darker gray
-  }
-};
-
-// Relationship color schemes
-const RELATIONSHIP_COLORS = {
-  'flight-hotel': {
-    primary: '#f59e0b',    // Amber
-    secondary: '#fffbeb',  // Light amber
-    accent: '#fcd34d',     // Medium amber
-    text: '#92400e',       // Dark amber
-    textSecondary: '#78350f' // Darker amber
-  },
-  'hotel-activity': {
-    primary: '#8b5cf6',    // Purple
-    secondary: '#faf5ff',  // Light purple
-    accent: '#c4b5fd',     // Medium purple
-    text: '#6b21a8',       // Dark purple
-    textSecondary: '#581c87' // Darker purple
-  },
-  'flight-activity': {
-    primary: '#ec4899',    // Pink
-    secondary: '#fdf2f8',  // Light pink
-    accent: '#f9a8d4',     // Medium pink
-    text: '#be185d',       // Dark pink
-    textSecondary: '#9d174d' // Darker pink
-  }
-};
 
 export function UnifiedLabel({ block, relationship, x, y, width }: UnifiedLabelProps) {
   // Don't show label if this block is a child in a relationship
@@ -82,14 +27,13 @@ export function UnifiedLabel({ block, relationship, x, y, width }: UnifiedLabelP
   const { title, subtitle, details } = getLabelContent(block, relationship || null);
   
   // Choose colors based on whether it's grouped or individual
-  const colors = isGrouped 
-    ? RELATIONSHIP_COLORS[(relationship?.relationshipType as keyof typeof RELATIONSHIP_COLORS) || 'flight-hotel'] || RELATIONSHIP_COLORS['flight-hotel']
-    : BLOCK_COLORS[blockType] || BLOCK_COLORS.regular;
+  const colors = getBlockColors(blockType, isGrouped, relationship?.relationshipType);
 
   // Calculate label height based on content
   const baseHeight = 50;
   const detailsHeight = (isGrouped || details) ? 40 : 20; // More space for grouped labels or individual with details
-  const totalHeight = baseHeight + detailsHeight;
+  const colorKeyHeight = 16; // Space for color key
+  const totalHeight = baseHeight + detailsHeight + colorKeyHeight;
   
   // Position the label floating above the blocks
   const labelY = y - totalHeight - 15; // 15px gap above blocks
@@ -189,6 +133,32 @@ export function UnifiedLabel({ block, relationship, x, y, width }: UnifiedLabelP
           listening={false}
         />
       )}
+      
+      {/* Color key */}
+      <Group>
+        {/* Color indicator */}
+        <Rect
+          x={x + 8}
+          y={labelY + (details ? 62 : 48)}
+          width={8}
+          height={8}
+          fill={colors.primary}
+          cornerRadius={2}
+          listening={false}
+        />
+        
+        {/* Color name */}
+        <Text
+          x={x + 20}
+          y={labelY + (details ? 64 : 50)}
+          text={colors.name}
+          fontSize={9}
+          fontFamily="Inter, system-ui, sans-serif"
+          fill={colors.textSecondary}
+          fontStyle="bold"
+          listening={false}
+        />
+      </Group>
       
       {/* Day indicators - only show for grouped blocks */}
       {isGrouped && relationship && (
