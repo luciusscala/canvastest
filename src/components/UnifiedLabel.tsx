@@ -1,6 +1,7 @@
 import { Group, Rect, Text, Line } from 'react-konva';
 import type { CanvasBlock, FlightBlock, HotelBlock, ActivityBlock } from '../types/index';
 import type { BlockRelationship } from '../utils/blockRelationships';
+import { DayIndicators } from './DayIndicators';
 
 interface UnifiedLabelProps {
   block: CanvasBlock | FlightBlock | HotelBlock | ActivityBlock;
@@ -133,16 +134,16 @@ export function UnifiedLabel({ block, relationship, x, y, width }: UnifiedLabelP
       />
       
       {/* Type label */}
-        <Text
-          x={x + 18}
-          y={labelY + 4}
-          text={getTypeLabel(block, relationship || null)}
-          fontSize={9}
-          fontFamily="Inter, system-ui, sans-serif"
-          fill={colors.text}
-          fontStyle="bold"
-          listening={false}
-        />
+      <Text
+        x={x + 18}
+        y={labelY + 4}
+        text={getTypeLabel(block, relationship || null)}
+        fontSize={9}
+        fontFamily="Inter, system-ui, sans-serif"
+        fill={colors.text}
+        fontStyle="bold"
+        listening={false}
+      />
       
       {/* Main title */}
       <Text
@@ -186,6 +187,17 @@ export function UnifiedLabel({ block, relationship, x, y, width }: UnifiedLabelP
           wrap="none"
           ellipsis={true}
           listening={false}
+        />
+      )}
+      
+      {/* Day indicators - only show for grouped blocks */}
+      {isGrouped && relationship && (
+        <DayIndicators
+          relationship={relationship}
+          x={x}
+          y={y}
+          width={width}
+          height={block.height}
         />
       )}
     </Group>
@@ -315,7 +327,7 @@ function getIndividualLabelContent(block: CanvasBlock | FlightBlock | HotelBlock
         subtitle = 'Block';
     }
   } else {
-    title = block.title;
+    title = 'title' in block ? block.title : 'Block';
     subtitle = 'Block';
   }
   
