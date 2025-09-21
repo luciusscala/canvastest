@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react';
-import { Group, Rect, Text } from 'react-konva';
+import { Group, Rect } from 'react-konva';
 import type { FlightBlock, FlightSegment } from '../types/index';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { useSnapping } from '../hooks/useSnapping';
-import { FloatingLabel } from './FloatingLabel';
+import { UnifiedLabel } from './UnifiedLabel';
 
 type KonvaEvent = {
   target: {
@@ -122,15 +122,14 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Show floating label only if this flight is the PARENT in the relationship */}
-      {shouldShowLabel && (
-        <FloatingLabel
-          relationship={currentRelationship}
-          x={0}
-          y={0}
-          width={block.width}
-        />
-      )}
+      {/* Show unified label - either grouped or individual */}
+      <UnifiedLabel
+        block={block}
+        relationship={currentRelationship}
+        x={0}
+        y={0}
+        width={block.width}
+      />
       {/* Context Bar - horizontal rectangle */}
       <Rect
         x={0}
@@ -178,121 +177,6 @@ export function FlightBlock({ block, onDragStart, onDragEnd }: FlightBlockProps)
         );
       })}
 
-      {/* Individual label - only show if not part of a relationship or if this is a child */}
-      {!isPartOfRelationship && (
-        <>
-          {/* Color-coded key above the block */}
-          <Rect
-            x={0}
-            y={-80}
-            width={block.width}
-            height={70}
-            fill="#ffffff"
-            stroke="#e5e7eb"
-            strokeWidth={1}
-            cornerRadius={6}
-            shadowColor="rgba(0, 0, 0, 0.1)"
-            shadowBlur={4}
-            shadowOffset={{ x: 0, y: 2 }}
-            shadowOpacity={1}
-            listening={false}
-          />
-          
-          {/* Flight title and dates */}
-          <Text
-            x={10}
-            y={-70}
-            text={`${block.title} - ${block.departureAirport} → ${block.arrivalAirport}`}
-            fontSize={16}
-            fontFamily="Inter, system-ui, sans-serif"
-            fill="#1f2937"
-            fontStyle="bold"
-            listening={false}
-          />
-          
-          {/* Flight dates */}
-          {block.dateRange && (
-            <Text
-              x={10}
-              y={-55}
-              text={`${block.dateRange.start.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric',
-                year: 'numeric'
-              })} - ${block.dateRange.end.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric',
-                year: 'numeric'
-              })}`}
-              fontSize={14}
-              fontFamily="Inter, system-ui, sans-serif"
-              fill="#6b7280"
-              listening={false}
-            />
-          )}
-          
-          {/* Flight segments key */}
-          {block.segments.map((segment, index) => {
-            const keyX = 10 + (index * 200); // Space segments horizontally
-            
-            return (
-              <Group key={`key-${segment.id}`}>
-                {/* Color indicator */}
-                <Rect
-                  x={keyX}
-                  y={-30}
-                  width={12}
-                  height={12}
-                  fill={SEGMENT_COLORS[segment.type]}
-                  cornerRadius={2}
-                  listening={false}
-                />
-                
-                {/* Flight info */}
-                <Text
-                  x={keyX + 18}
-                  y={-28}
-                  text={`${segment.flightNumber} (${segment.departure}→${segment.arrival}) - ${segment.duration}h`}
-                  fontSize={12}
-                  fontFamily="Inter, system-ui, sans-serif"
-                  fill="#374151"
-                  listening={false}
-                />
-                
-                {/* Date info */}
-                {segment.dateRange && (
-                  <Text
-                    x={keyX + 18}
-                    y={-16}
-                    text={`${segment.dateRange.start.toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric'
-                    })} - ${segment.dateRange.end.toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric'
-                    })}`}
-                    fontSize={10}
-                    fontFamily="Inter, system-ui, sans-serif"
-                    fill="#6b7280"
-                    listening={false}
-                  />
-                )}
-                
-                {/* Type label */}
-                <Text
-                  x={keyX + 18}
-                  y={-4}
-                  text={segment.type.toUpperCase()}
-                  fontSize={8}
-                  fontFamily="Inter, system-ui, sans-serif"
-                  fill="#9ca3af"
-                  listening={false}
-                />
-              </Group>
-            );
-          })}
-        </>
-      )}
       
     </Group>
   );
