@@ -36,12 +36,12 @@ export const BLOCK_COLORS = {
 
 export const RELATIONSHIP_COLORS = {
   'flight-hotel': {
-    primary: '#0891b2',    // Cyan
-    secondary: '#f0f9ff',  // Light cyan
-    accent: '#67e8f9',     // Medium cyan
-    text: '#0e7490',       // Dark cyan
-    textSecondary: '#0c4a6e', // Darker cyan
-    name: 'Cyan'
+    primary: '#6b7280',    // Gray
+    secondary: '#f9fafb',  // Light gray
+    accent: '#d1d5db',     // Medium gray
+    text: '#374151',       // Dark gray
+    textSecondary: '#1f2937', // Darker gray
+    name: 'Gray'
   },
   'hotel-activity': {
     primary: '#be185d',    // Pink

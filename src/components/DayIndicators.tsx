@@ -54,7 +54,7 @@ export function DayIndicators({ relationship, x, y, width, height }: DayIndicato
               />
             )}
             
-            {/* Day label */}
+            {/* Day label - single line, no duplicate numbers */}
             <Text
               x={dayX + 8}
               y={indicatorY + 6}
@@ -63,19 +63,6 @@ export function DayIndicators({ relationship, x, y, width, height }: DayIndicato
               fontFamily="Inter, system-ui, sans-serif"
               fill="#6b7280"
               fontStyle="bold"
-              width={dayWidth - 16}
-              align="center"
-              listening={false}
-            />
-            
-            {/* Day number */}
-            <Text
-              x={dayX + 8}
-              y={indicatorY + 16}
-              text={day.dayNumber}
-              fontSize={8}
-              fontFamily="Inter, system-ui, sans-serif"
-              fill="#9ca3af"
               width={dayWidth - 16}
               align="center"
               listening={false}

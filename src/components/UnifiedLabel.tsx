@@ -37,7 +37,7 @@ export function UnifiedLabel({ block, relationship, x, y, width }: UnifiedLabelP
   const totalHeight = baseHeight + detailsHeight + colorLegendHeight;
   
   // Position the label floating above the blocks
-  const labelY = y - totalHeight - 15; // 15px gap above blocks
+  const labelY = y - totalHeight - 30; // 30px gap above blocks (increased from 15px)
   
   return (
     <Group>
@@ -413,7 +413,7 @@ function getColorLegend(block: CanvasBlock | FlightBlock | HotelBlock | Activity
     allBlocks.forEach(blockItem => {
       if ('type' in blockItem) {
         // Get the individual block colors for this specific block
-        const blockColors = getBlockColors(blockItem.type, false, null);
+        const blockColors = getBlockColors(blockItem.type, false, undefined);
         
         switch (blockItem.type) {
           case 'flight': {
