@@ -48,6 +48,39 @@ export function canSnapToParent(
   return false;
 }
 
+// Check for temporal conflicts when snapping
+export function hasTemporalConflict(
+  draggedBlock: AnyBlock,
+  parentBlock: AnyBlock,
+  allBlocks: AnyBlock[]
+): boolean {
+  if (!draggedBlock.dateRange || !parentBlock.dateRange) {
+    return false; // No temporal data, no conflict
+  }
+
+  // Check if child fits within parent's time range
+  const childStart = draggedBlock.dateRange.start;
+  const childEnd = draggedBlock.dateRange.end;
+  const parentStart = parentBlock.dateRange.start;
+  const parentEnd = parentBlock.dateRange.end;
+  
+  // Child must be completely within parent's time range
+  if (childStart < parentStart || childEnd > parentEnd) {
+    return true; // Temporal conflict - child outside parent's range
+  }
+
+  // Check for conflicts with other children of the same parent
+  const parentChildren = allBlocks.filter(block => 
+    block.id !== draggedBlock.id && 
+    block.id !== parentBlock.id &&
+    // Check if this block is already a child of the parent
+    // This would need to be tracked in the relationship system
+    false // For now, skip this check
+  );
+
+  return false; // No conflicts found
+}
+
 // Check if dragged block is over a parent block
 export function isOverParent(
   draggedBlock: AnyBlock,
@@ -80,8 +113,7 @@ export function calculateSnapPosition(
   draggedY: number
 ): SimpleSnapResult {
   // Check if blocks have time data
-  if (!draggedBlock.startHour || !draggedBlock.durationHours ||
-      !parentBlock.startHour || !parentBlock.durationHours) {
+  if (!draggedBlock.dateRange || !parentBlock.dateRange) {
     return {
       shouldSnap: false,
       snapX: draggedX,
@@ -91,13 +123,13 @@ export function calculateSnapPosition(
   }
   
   // Check if child can fit within parent's time range
-  const childStartHour = draggedBlock.startHour;
-  const childEndHour = childStartHour + draggedBlock.durationHours;
-  const parentStartHour = parentBlock.startHour;
-  const parentEndHour = parentStartHour + parentBlock.durationHours;
+  const childStart = draggedBlock.dateRange.start;
+  const childEnd = draggedBlock.dateRange.end;
+  const parentStart = parentBlock.dateRange.start;
+  const parentEnd = parentBlock.dateRange.end;
   
   // Child must be completely within parent's time range
-  if (childStartHour < parentStartHour || childEndHour > parentEndHour) {
+  if (childStart < parentStart || childEnd > parentEnd) {
     return {
       shouldSnap: false,
       snapX: draggedX,
@@ -106,13 +138,13 @@ export function calculateSnapPosition(
     };
   }
   
-  // Calculate position within parent
-  const relativeStartHour = childStartHour - parentStartHour;
-  const parentWidth = parentBlock.width;
-  const parentDurationHours = parentBlock.durationHours;
+  // Calculate position within parent based on actual dates
+  const parentDuration = parentEnd.getTime() - parentStart.getTime();
+  const childOffset = childStart.getTime() - parentStart.getTime();
+  const relativePosition = childOffset / parentDuration;
   
   // Calculate X position within parent
-  const snapX = parentBlock.x + (relativeStartHour / parentDurationHours) * parentWidth;
+  const snapX = parentBlock.x + (relativePosition * parentBlock.width);
   
   // Calculate Y position based on block type hierarchy
   const snapY = calculateVerticalSnapPosition(
@@ -168,6 +200,11 @@ export function findSnapTarget(
     
     // Check if we're over this block
     if (!isOverParent(draggedBlock, block, draggedX, draggedY)) continue;
+    
+    // Check for temporal conflicts
+    if (hasTemporalConflict(draggedBlock, block, allBlocks)) {
+      continue; // Skip this parent due to temporal conflict
+    }
     
     // Calculate snap position
     const snapResult = calculateSnapPosition(draggedBlock, block, draggedX, draggedY);

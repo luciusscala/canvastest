@@ -1,10 +1,11 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { Stage, Layer, Text, Line, Group, Rect } from 'react-konva';
+import { Stage, Layer, Text, Line } from 'react-konva';
 import { useCanvasStore } from '../store/useCanvasStore';
 import { DraggableBlock } from './DraggableBlock';
 import { FlightBlock } from './FlightBlock';
 import { HotelBlock } from './HotelBlock';
 import { ActivityBlock } from './ActivityBlock';
+import { ControlPanel } from './ControlPanel';
 import type { FlightBlock as FlightBlockType, FlightSegment, HotelBlock as HotelBlockType, HotelEvent, ActivityBlock as ActivityBlockType } from '../types/index';
 import { createDateRange, calculateHoursFromTripStart, calculateBlockPosition } from '../utils/timeUtils';
 
@@ -49,8 +50,8 @@ function SimpleGrid({ stageWidth, stageHeight, spacing = 20 }: { stageWidth: num
 }
 
 export function Canvas() {
-  const stageRef = useRef<any>(null);
-  const [stageSize, setStageSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const stageRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [stageSize, setStageSize] = useState({ width: window.innerWidth - 400, height: window.innerHeight });
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
   const [stageScale, setStageScale] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
@@ -274,7 +275,7 @@ export function Canvas() {
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
-      setStageSize({ width: window.innerWidth, height: window.innerHeight });
+      setStageSize({ width: window.innerWidth - 400, height: window.innerHeight });
     };
 
     window.addEventListener('resize', handleResize);
@@ -321,7 +322,7 @@ export function Canvas() {
   }, []);
 
   // Handle wheel zoom - default sensitivity
-  const handleWheel = useCallback((e: any) => {
+  const handleWheel = useCallback((e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     e.evt.preventDefault();
 
     const scaleBy = 1.1; // Default Konva sensitivity
@@ -348,7 +349,7 @@ export function Canvas() {
   }, []);
 
   // Handle double click to add blocks
-  const handleStageClick = useCallback((e: any) => {
+  const handleStageClick = useCallback((e: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     if (e.evt.detail === 2) { // Double click
       const stage = stageRef.current;
       const pointer = stage.getPointerPosition();
@@ -394,16 +395,18 @@ export function Canvas() {
 
 
   return (
-    <div className="w-full h-screen bg-gradient-to-br from-slate-50 to-slate-100 relative">
-      {/* Instructions */}
-      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg border border-gray-200 z-10">
-        <p className="text-sm text-gray-600">
-          <strong>Canvas Controls:</strong><br />
-          • Double-click to add blocks<br />
-          • Drag to pan, scroll to zoom<br />
-          • Drag blocks to move them
-        </p>
-      </div>
+    <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex">
+      {/* Canvas Area */}
+      <div className="flex-1 relative">
+        {/* Instructions */}
+        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg border border-gray-200 z-10">
+          <p className="text-sm text-gray-600">
+            <strong>Canvas Controls:</strong><br />
+            • Double-click to add blocks<br />
+            • Drag to pan, scroll to zoom<br />
+            • Drag blocks to move them
+          </p>
+        </div>
 
       <Stage
         ref={stageRef}
@@ -478,7 +481,12 @@ export function Canvas() {
           })}
         </Layer>
       </Stage>
+      </div>
 
+      {/* Permanent Control Panel */}
+      <div className="w-96 bg-white border-l border-gray-300 shadow-lg">
+        <ControlPanel onClose={() => {}} />
+      </div>
     </div>
   );
 }
